@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+    html {
+        @apply scroll-smooth;
+    }
+    body {
+        @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors;
+    }
+}
+
+/* Custom components */
+@layer components {
+    .btn-primary {
+        @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700
+        transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    }
+
+    .input-field {
+        @apply w-full px-3 py-2 border rounded-lg focus:outline-none
+        focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600
+        dark:bg-gray-800 dark:text-white;
+    }
+}
+
+/* Custom utilities */
+@layer utilities {
+    .text-shadow {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animation-slow {
+            animation-duration: 0.01ms !important;
+        }
+    }
+}
+
+/* Dark mode fixes */
+@media (prefers-color-scheme: dark) {
+    img {
+        @apply brightness-90 contrast-125;
+    }
+}
