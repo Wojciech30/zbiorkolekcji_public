@@ -3,15 +3,15 @@
     <h1 class="text-3xl font-bold text-center mb-6">Logowanie</h1>
     <form @submit.prevent="loginUser" class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md space-y-4">
       <div>
-        <label for="username" class="block font-bold">Nazwa użytkownika</label>
+        <label for="identifier" class="block font-bold">Adres e-mail lub nazwa użytkownika</label>
         <input
-            v-model="username"
-            id="username"
+            v-model="identifier"
+            id="identifier"
             type="text"
             class="border w-full p-2 rounded"
-            :class="{ 'border-red-500': errors.username }"
+            :class="{ 'border-red-500': errors.identifier }"
         />
-        <p v-if="errors.username" class="text-red-500 text-sm">{{ errors.username }}</p>
+        <p v-if="errors.identifier" class="text-red-500 text-sm">{{ errors.identifier }}</p>
       </div>
       <div>
         <label for="password" class="block font-bold">Hasło</label>
@@ -44,16 +44,14 @@ export default {
     const toast = useToast();
     const router = useRouter();
     const store = useStore();
-
-    // Rozszerzona walidacja
     const schema = yup.object({
-      username: yup.string().required("Nazwa użytkownika jest wymagana"),
+      identifier: yup.string().required("Nazwa użytkownika lub e-mail jest wymagany"),
       password: yup.string()
           .required("Hasło jest wymagane")
     });
 
     const { handleSubmit, errors } = useForm({ validationSchema: schema });
-    const { value: username } = useField("username");
+    const { value: identifier } = useField("identifier");
     const { value: password } = useField("password");
 
     const loginUser = handleSubmit(async (values) => {
@@ -66,7 +64,7 @@ export default {
       }
     });
 
-    return { username, password, errors, loginUser };
+    return { identifier, password, errors, loginUser };
   }
 };
 </script>

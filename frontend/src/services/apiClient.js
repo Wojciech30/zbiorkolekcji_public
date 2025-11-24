@@ -11,16 +11,16 @@ const apiClient = axios.create({
     }
 });
 
-// Interceptor żądań
+// Interceptor żądań - używa Vuex jako źródła prawdy dla tokena
 apiClient.interceptors.request.use(config => {
-    const token = localStorage.getItem('accessToken');
+    const token = store.state.auth?.accessToken;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
 
-// Interceptor odpowiedzi
+// Interceptor odpowiedzi - odświeżanie tokena przez dispatch do modułu auth
 apiClient.interceptors.response.use(
     response => response,
     async error => {
@@ -30,14 +30,14 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const { accessToken } = await store.dispatch('auth/refreshToken');
+                const accessToken = await store.dispatch('auth/refreshToken');
 
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
                 return apiClient(originalRequest);
             } catch (refreshError) {
-                store.commit('auth/logout');
-                await router.push({name: 'Login'});
+                await store.dispatch('auth/logout');
+                await router.push({ name: 'Login' }).catch(() => {});
                 return Promise.reject(refreshError);
             }
         }

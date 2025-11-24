@@ -4,26 +4,32 @@ import router from "@/router";
 export default {
     namespaced: true,
     state: () => ({
-        user: JSON.parse(localStorage.getItem("user")),
+        user: (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })(),
         accessToken: localStorage.getItem("accessToken"),
         refreshToken: localStorage.getItem("refreshToken")
     }),
     mutations: {
         SET_USER(state, user) {
             state.user = user;
-            localStorage.setItem("user", JSON.stringify(user));
+            if (user) localStorage.setItem("user", JSON.stringify(user));
+            else localStorage.removeItem("user");
         },
         SET_TOKENS(state, { accessToken, refreshToken }) {
             state.accessToken = accessToken;
             state.refreshToken = refreshToken;
-            localStorage.setItem("accessToken", accessToken);
-            localStorage.setItem("refreshToken", refreshToken);
+            if (accessToken) localStorage.setItem("accessToken", accessToken);
+            else localStorage.removeItem("accessToken");
+            if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+            else localStorage.removeItem("refreshToken");
         },
         LOGOUT(state) {
             state.accessToken = null;
             state.refreshToken = null;
             state.user = null;
-            localStorage.clear();
+            // Usuń tylko klucze auth, nie czyść całego localStorage
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
         }
     },
     actions: {
@@ -31,7 +37,7 @@ export default {
             try {
                 const response = await AuthService.login(credentials);
 
-                if (!response?.accessToken || !response.refreshToken) {
+                if (!response?.accessToken || !response?.refreshToken) {
                     throw new Error('Nieprawidłowa odpowiedź serwera');
                 }
 
@@ -51,9 +57,17 @@ export default {
             }
         },
 
-        async logout({ commit }) {
+        async logout({ commit, state }) {
+            // opcjonalnie wywołaj endpoint logout na backendzie
+            try {
+                if (state.refreshToken) {
+                    await AuthService.logout(state.refreshToken).catch(() => {});
+                }
+            } catch {
+                // ignoruj błędy podczas wylogowywania
+            }
             commit('LOGOUT');
-            router.push('/login').catch(() => {});
+            await router.push({ name: 'Login' }).catch(() => {});
         },
 
         async refreshToken({ commit, state }) {
