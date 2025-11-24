@@ -22,6 +22,24 @@ const routes = [
         meta: { access: "guest", hideForAuth: true }
     },
     {
+        path: "/verify-email",
+        name: "VerifyEmail",
+        component: () => import("@/views/VerifyEmailView.vue"),
+        meta: { access: "public" }
+    },
+    {
+        path: "/forgot-password",
+        name: "ForgotPassword",
+        component: () => import("@/views/ForgotPasswordView.vue"),
+        meta: { access: "public" }
+    },
+    {
+        path: "/reset-password",
+        name: "ResetPassword",
+        component: () => import("@/views/ResetPasswordView.vue"),
+        meta: { access: "public" }
+    },
+    {
         path: "/profile",
         name: "Profile",
         component: () => import("@/views/ProfileView.vue"),
@@ -47,8 +65,8 @@ const routes = [
         props: true
     },
     {
-        path: '/items/:id',
-        name: 'SingleItem',
+        path: "/items/:id",
+        name: "SingleItem",
         component: SingleItemView,
         meta: { access: "public" },
         props: true
@@ -83,24 +101,28 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-    const requiresAuth = to.matched.some(record => record.meta.access === 'user' || record.meta.access === 'admin');
-    const requiresAdmin = to.matched.some(record => record.meta.access === 'admin');
-    const isAuthenticated = store.getters['auth/isAuthenticated'];
-    const isAdmin = store.getters['auth/isAdmin'];
+    const requiresAuth = to.matched.some(
+        record => record.meta.access === "user" || record.meta.access === "admin"
+    );
+    const requiresAdmin = to.matched.some(
+        record => record.meta.access === "admin"
+    );
+    const isAuthenticated = store.getters["auth/isAuthenticated"];
+    const isAdmin = store.getters["auth/isAdmin"];
 
-    if (to.meta.access === 'guest' && isAuthenticated) {
-        return next({ name: 'Home' });
+    if (to.meta.access === "guest" && isAuthenticated) {
+        return next({ name: "Home" });
     }
 
     if (requiresAuth && !isAuthenticated) {
         return next({
-            name: 'Login',
+            name: "Login",
             query: { redirect: to.fullPath }
         });
     }
 
     if (requiresAdmin && !isAdmin) {
-        return next({ name: 'Home' });
+        return next({ name: "Home" });
     }
 
     next();

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 const userSchema = new mongoose.Schema(
     {
@@ -39,6 +40,26 @@ const userSchema = new mongoose.Schema(
         lastLogin: {
             type: Date,
             default: null
+        },
+        isEmailVerified: {
+            type: Boolean,
+            default: false
+        },
+        emailVerificationToken: {
+            type: String,
+            select: false
+        },
+        emailVerificationExpires: {
+            type: Date,
+            select: false
+        },
+        passwordResetToken: {
+            type: String,
+            select: false
+        },
+        passwordResetExpires: {
+            type: Date,
+            select: false
         }
     },
     {
@@ -48,6 +69,10 @@ const userSchema = new mongoose.Schema(
             transform: (doc, ret) => {
                 delete ret.password;
                 delete ret.__v;
+                delete ret.emailVerificationToken;
+                delete ret.emailVerificationExpires;
+                delete ret.passwordResetToken;
+                delete ret.passwordResetExpires;
                 return ret;
             }
         }
@@ -69,17 +94,45 @@ userSchema.pre("save", async function (next) {
 });
 
 userSchema.methods = {
-    comparePassword: async function(candidatePassword) {
+    comparePassword: async function (candidatePassword) {
         return bcrypt.compare(candidatePassword, this.password);
     },
-    toProfile: function() {
+
+    toProfile: function () {
         return {
             id: this._id,
             username: this.username,
             email: this.email,
             role: this.role,
-            createdAt: this.createdAt
+            createdAt: this.createdAt,
+            isEmailVerified: this.isEmailVerified
         };
+    },
+
+    generateEmailVerificationToken: function () {
+        const rawToken = crypto.randomBytes(32).toString("hex");
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(rawToken)
+            .digest("hex");
+
+        this.emailVerificationToken = hashedToken;
+        this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+
+        return rawToken;
+    },
+
+    generatePasswordResetToken: function () {
+        const rawToken = crypto.randomBytes(32).toString("hex");
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(rawToken)
+            .digest("hex");
+
+        this.passwordResetToken = hashedToken;
+        this.passwordResetExpires = Date.now() + 60 * 60 * 1000;
+
+        return rawToken;
     }
 };
 

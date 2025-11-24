@@ -54,6 +54,11 @@
         <span v-else>Logowanie...</span>
       </button>
     </form>
+    <div class="text-center mt-4">
+      <router-link :to="{ name: 'ForgotPassword' }" class="text-blue-600 hover:underline">
+        Nie pamiętasz hasła?
+      </router-link>
+    </div>
   </div>
 </template>
 

@@ -3,8 +3,15 @@ import router from "@/router";
 
 export default {
     namespaced: true,
+
     state: () => ({
-        user: (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })(),
+        user: (() => {
+            try {
+                return JSON.parse(localStorage.getItem("user"));
+            } catch {
+                return null;
+            }
+        })(),
         accessToken: localStorage.getItem("accessToken"),
         refreshToken: localStorage.getItem("refreshToken")
     }),
@@ -15,18 +22,23 @@ export default {
             if (user) localStorage.setItem("user", JSON.stringify(user));
             else localStorage.removeItem("user");
         },
+
         SET_TOKENS(state, { accessToken, refreshToken }) {
             state.accessToken = accessToken;
             state.refreshToken = refreshToken;
+
             if (accessToken) localStorage.setItem("accessToken", accessToken);
             else localStorage.removeItem("accessToken");
+
             if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
             else localStorage.removeItem("refreshToken");
         },
+
         LOGOUT(state) {
             state.accessToken = null;
             state.refreshToken = null;
             state.user = null;
+
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("user");
@@ -35,65 +47,51 @@ export default {
 
     actions: {
         async login({ commit }, credentials) {
-            try {
-                const response = await AuthService.login(credentials);
+            const response = await AuthService.login(credentials);
 
-                if (!response?.accessToken || !response?.refreshToken) {
-                    throw new Error("Nieprawidłowa odpowiedź serwera");
-                }
-
-                commit("SET_TOKENS", {
-                    accessToken: response.accessToken,
-                    refreshToken: response.refreshToken
-                });
-
-                commit("SET_USER", response.user);
-
-                return response;
-
-            } catch (error) {
-                const backend = error.response?.data;
-
-                // Mapowanie kodów błędów na komunikaty użytkownika
-                const errorMap = {
-                    LOGIN_MISSING_FIELDS: "Podaj login oraz hasło.",
-                    INVALID_CREDENTIALS: "Nieprawidłowy login lub hasło.",
-                    TOKEN_GENERATION_ERROR: "Błąd serwera przy generowaniu tokenów.",
-                    SERVER_ERROR: "Błąd serwera. Spróbuj ponownie później."
-                };
-
-                const message =
-                    errorMap[backend?.code] ||
-                    backend?.message ||
-                    error.message ||
-                    "Nie udało się zalogować.";
-
-                throw new Error(message);
+            if (!response?.accessToken || !response?.refreshToken) {
+                throw new Error("Nieprawidłowa odpowiedź serwera");
             }
-        },
 
+            commit("SET_TOKENS", {
+                accessToken: response.accessToken,
+                refreshToken: response.refreshToken
+            });
+
+            commit("SET_USER", response.user);
+
+            return response;
+        },
+        
         async logout({ commit, state }) {
             try {
                 if (state.refreshToken) {
                     await AuthService.logout(state.refreshToken).catch(() => {});
                 }
             } catch {
-                // ignoruj błędy
+                // ignorujemy błędy backendu
             }
+
             commit("LOGOUT");
+
             await router.push({ name: "Login" }).catch(() => {});
         },
 
         async refreshToken({ commit, state }) {
-            if (!state.refreshToken) throw new Error("Brak tokena odświeżającego");
+            if (!state.refreshToken) {
+                throw new Error("Brak tokena odświeżającego");
+            }
 
             try {
                 const response = await AuthService.refreshToken(state.refreshToken);
+
                 commit("SET_TOKENS", {
                     accessToken: response.accessToken,
                     refreshToken: response.refreshToken
                 });
+
                 return response.accessToken;
+
             } catch (error) {
                 commit("LOGOUT");
                 throw error;
