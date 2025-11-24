@@ -8,6 +8,7 @@ export default {
         accessToken: localStorage.getItem("accessToken"),
         refreshToken: localStorage.getItem("refreshToken")
     }),
+
     mutations: {
         SET_USER(state, user) {
             state.user = user;
@@ -26,48 +27,61 @@ export default {
             state.accessToken = null;
             state.refreshToken = null;
             state.user = null;
-            // Usuń tylko klucze auth, nie czyść całego localStorage
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("user");
         }
     },
+
     actions: {
         async login({ commit }, credentials) {
             try {
                 const response = await AuthService.login(credentials);
 
                 if (!response?.accessToken || !response?.refreshToken) {
-                    throw new Error('Nieprawidłowa odpowiedź serwera');
+                    throw new Error("Nieprawidłowa odpowiedź serwera");
                 }
 
                 commit("SET_TOKENS", {
                     accessToken: response.accessToken,
                     refreshToken: response.refreshToken
                 });
+
                 commit("SET_USER", response.user);
 
                 return response;
+
             } catch (error) {
-                throw new Error(
-                    error.response?.data?.message
-                    || error.message
-                    || "Błąd logowania"
-                );
+                const backend = error.response?.data;
+
+                // Mapowanie kodów błędów na komunikaty użytkownika
+                const errorMap = {
+                    LOGIN_MISSING_FIELDS: "Podaj login oraz hasło.",
+                    INVALID_CREDENTIALS: "Nieprawidłowy login lub hasło.",
+                    TOKEN_GENERATION_ERROR: "Błąd serwera przy generowaniu tokenów.",
+                    SERVER_ERROR: "Błąd serwera. Spróbuj ponownie później."
+                };
+
+                const message =
+                    errorMap[backend?.code] ||
+                    backend?.message ||
+                    error.message ||
+                    "Nie udało się zalogować.";
+
+                throw new Error(message);
             }
         },
 
         async logout({ commit, state }) {
-            // opcjonalnie wywołaj endpoint logout na backendzie
             try {
                 if (state.refreshToken) {
                     await AuthService.logout(state.refreshToken).catch(() => {});
                 }
             } catch {
-                // ignoruj błędy podczas wylogowywania
+                // ignoruj błędy
             }
-            commit('LOGOUT');
-            await router.push({ name: 'Login' }).catch(() => {});
+            commit("LOGOUT");
+            await router.push({ name: "Login" }).catch(() => {});
         },
 
         async refreshToken({ commit, state }) {
@@ -81,11 +95,12 @@ export default {
                 });
                 return response.accessToken;
             } catch (error) {
-                commit('LOGOUT');
+                commit("LOGOUT");
                 throw error;
             }
         }
     },
+
     getters: {
         isAuthenticated: state => !!state.user,
         isAdmin: state => state.user?.role === "admin"

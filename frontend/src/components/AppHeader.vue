@@ -130,31 +130,22 @@
 </template>
 
 <script setup>
-import {computed, ref, watch} from 'vue';
+import {computed, ref} from 'vue';
 import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 
 const store = useStore();
-const router = useRouter();
 const toast = useToast();
 const isMobileMenuOpen = ref(false);
 
 const isAuthenticated = computed(() => store.getters['auth/isAuthenticated']);
 const isAdmin = computed(() => store.getters['auth/isAdmin']);
 
-watch(isAuthenticated, (newVal) => {
-  if (!newVal) {
-    router.push({ name: 'Login' });
-  }
-});
-
 const handleLogout = async () => {
   if (!window.confirm('Czy na pewno chcesz się wylogować?')) return;
 
   try {
     await store.dispatch('auth/logout');
-    await router.push({ name: 'Login' });
   } catch (error) {
     toast.error('Błąd podczas wylogowywania');
     console.error('Logout error:', error);
@@ -167,15 +158,7 @@ const handleLogout = async () => {
   @apply px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors;
 }
 
-.nav-link-active {
-  @apply bg-gray-900 text-white;
-}
-
 .mobile-nav-link {
   @apply block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white;
-}
-
-.mobile-nav-link-active {
-  @apply bg-gray-900 text-white;
 }
 </style>
