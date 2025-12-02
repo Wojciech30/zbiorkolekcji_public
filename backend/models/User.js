@@ -60,7 +60,13 @@ const userSchema = new mongoose.Schema(
         passwordResetExpires: {
             type: Date,
             select: false
+        },
+        emailVerificationLastSent: {
+            type: Date,
+            default: null,
+            select: false
         }
+
     },
     {
         timestamps: true,
@@ -81,16 +87,12 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ role: 1, createdAt: -1 });
 
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
+// 🔧 poprawiony hook
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
 
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(new Error("Błąd podczas hashowania hasła"));
-    }
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 userSchema.methods = {

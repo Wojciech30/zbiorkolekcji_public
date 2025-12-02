@@ -8,11 +8,9 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error("Brak konfiguracji JWT_SECRET");
 
-// Możesz ustawić adres frontu w .env (np. http://localhost:8080)
 const FRONTEND_BASE_URL =
     process.env.FRONTEND_BASE_URL || "http://localhost:8080";
 
-// Centralne definicje komunikatów
 const ERROR_MESSAGES = {
     REGISTER_MISSING_FIELDS:
         "Wymagane pola: nazwa użytkownika, hasło i email",
@@ -106,7 +104,6 @@ router.post("/login", async (req, res) => {
             });
         }
 
-        // Blokujemy logowanie, jeśli email nie został potwierdzony
         if (!user.isEmailVerified) {
             return res.status(403).json({
                 code: "EMAIL_NOT_VERIFIED",
@@ -183,7 +180,6 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        // Tworzymy usera, generujemy token weryfikacyjny emaila
         const newUser = new User({ username, password, email });
         const emailVerificationToken =
             newUser.generateEmailVerificationToken();
@@ -191,8 +187,7 @@ router.post("/register", async (req, res) => {
 
         const verificationUrl = `${FRONTEND_BASE_URL}/verify-email?token=${emailVerificationToken}`;
 
-        // TODO: tutaj w przyszłości wyślesz maila z verificationUrl
-        // Na razie zwracamy URL w odpowiedzi (przydatne w dev)
+        //TODO: dodać wysyłkę maila z verificationUrl
         res.status(201).json({
             user: {
                 id: newUser._id,
@@ -273,6 +268,73 @@ router.post("/verify-email", async (req, res) => {
     }
 });
 
+// ======================= PONOWNE WYSŁANIE LINKU WERYFIKACYJNEGO =======================
+router.post("/resend-verification", async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                code: "EMAIL_REQUIRED",
+                message: "Adres e-mail jest wymagany."
+            });
+        }
+
+        const user = await User.findOne({ email }).select(
+            "+emailVerificationLastSent"
+        );
+
+        if (!user) {
+            return res.json({
+                code: "VERIFICATION_LINK_SENT",
+                message: "Jeśli konto istnieje, wysłaliśmy link aktywacyjny."
+            });
+        }
+
+        if (user.isEmailVerified) {
+            return res.status(400).json({
+                code: "EMAIL_ALREADY_VERIFIED",
+                message: "Adres e-mail został już potwierdzony."
+            });
+        }
+
+        const now = Date.now();
+        if (user.emailVerificationLastSent) {
+            const diff = now - new Date(user.emailVerificationLastSent).getTime();
+            const FIVE_MIN = 5 * 60 * 1000;
+
+            if (diff < FIVE_MIN) {
+                const remaining = Math.ceil((FIVE_MIN - diff) / 1000);
+
+                return res.status(429).json({
+                    code: "VERIFICATION_TOO_SOON",
+                    message: `Możesz poprosić o nowy link za ${remaining} sekund.`
+                });
+            }
+        }
+
+        const newToken = user.generateEmailVerificationToken();
+        user.emailVerificationLastSent = new Date();
+        await user.save({ validateBeforeSave: false });
+
+        const verifyUrl = `${FRONTEND_BASE_URL}/verify-email?token=${newToken}`;
+
+        return res.json({
+            code: "VERIFICATION_LINK_SENT",
+            message: "Link aktywacyjny został wysłany ponownie.",
+            verifyUrl: process.env.NODE_ENV !== "production" ? verifyUrl : undefined
+        });
+
+    } catch (error) {
+        console.error("Resend verification error:", error);
+        return res.status(500).json({
+            code: "SERVER_ERROR",
+            message: "Błąd serwera. Spróbuj ponownie później."
+        });
+    }
+});
+
+
 // ======================= FORGOT PASSWORD =======================
 router.post("/forgot-password", async (req, res) => {
     try {
@@ -286,7 +348,6 @@ router.post("/forgot-password", async (req, res) => {
         }
 
         const user = await User.findOne({ email });
-        // Dla bezpieczeństwa możemy zwrócić 200 nawet jeśli usera nie ma
         if (!user) {
             return res.json({
                 code: "FORGOT_PASSWORD_EMAIL_SENT",
@@ -300,7 +361,7 @@ router.post("/forgot-password", async (req, res) => {
 
         const resetUrl = `${FRONTEND_BASE_URL}/reset-password?token=${resetToken}`;
 
-        // TODO: tutaj wyślesz maila z resetUrl
+        // TODO: Dodać wysyłkę maila z resetUrl
         res.json({
             code: "FORGOT_PASSWORD_EMAIL_SENT",
             message:
@@ -507,7 +568,6 @@ router.post("/logout", (req, res) => {
         });
     }
 
-    // W przyszłości możesz tu dorobić blacklistę refresh tokenów.
     return res.json({
         code: "LOGOUT_SUCCESS",
         message: "Wylogowano pomyślnie"

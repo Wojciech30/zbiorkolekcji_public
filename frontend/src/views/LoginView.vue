@@ -12,6 +12,30 @@
       >
         <p class="font-semibold">Wystąpił błąd:</p>
         <p>{{ serverError }}</p>
+
+        <div
+          v-if="canResendVerification"
+          class="mt-3 pt-3 border-t border-red-200 text-sm"
+        >
+          <p class="mb-2">
+            Twój adres e-mail nie został potwierdzony.
+            Jeśli nie otrzymałeś wiadomości aktywacyjnej, możesz wysłać link ponownie.
+          </p>
+
+          <button
+            type="button"
+            @click="resendVerification"
+            class="bg-red-600 text-white px-3 py-1 rounded font-semibold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="isResending"
+          >
+            <span v-if="!isResending">Wyślij link ponownie</span>
+            <span v-else>Wysyłanie...</span>
+          </button>
+
+          <p v-if="resendInfo" class="mt-2 text-red-800">
+            {{ resendInfo }}
+          </p>
+        </div>
       </div>
 
       <div>
@@ -54,6 +78,7 @@
         <span v-else>Logowanie...</span>
       </button>
     </form>
+
     <div class="text-center mt-4">
       <router-link :to="{ name: 'ForgotPassword' }" class="text-blue-600 hover:underline">
         Nie pamiętasz hasła?
@@ -69,7 +94,8 @@ import { useToast } from "vue-toastification";
 import { useRouter } from "vue-router";
 import { useStore } from "vuex";
 import { ref } from "vue";
-import { getUserFriendlyErrorMessage } from "@/utils/errorHandler";
+import { normalizeApiError, getUserFriendlyErrorMessage } from "@/utils/errorHandler";
+import apiClient from "@/services/apiClient";
 
 export default {
   name: "LoginView",
@@ -80,6 +106,10 @@ export default {
 
     const isSubmitting = ref(false);
     const serverError = ref("");
+
+    const canResendVerification = ref(false);
+    const isResending = ref(false);
+    const resendInfo = ref("");
 
     const schema = yup.object({
       identifier: yup
@@ -95,23 +125,71 @@ export default {
     const loginUser = handleSubmit(async (values) => {
       isSubmitting.value = true;
       serverError.value = "";
+      canResendVerification.value = false;
+      resendInfo.value = "";
 
       try {
         await store.dispatch("auth/login", values);
         toast.success("Zalogowano pomyślnie!");
         await router.push({ name: "Home" });
       } catch (error) {
-        const message = getUserFriendlyErrorMessage(
-            error,
-            "Nie udało się zalogować."
+        const normalized = normalizeApiError(
+          error,
+          "Nie udało się zalogować."
+        );
+
+        const message = normalized.message || getUserFriendlyErrorMessage(
+          error,
+          "Nie udało się zalogować."
         );
 
         serverError.value = message;
         toast.error(message);
+
+        canResendVerification.value = normalized.code === "EMAIL_NOT_VERIFIED";
       } finally {
         isSubmitting.value = false;
       }
     });
+
+    const resendVerification = async () => {
+      resendInfo.value = "";
+
+      if (!identifier.value) {
+        resendInfo.value = "Podaj swój adres e-mail w polu logowania.";
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(identifier.value)) {
+        resendInfo.value =
+          "Aby wysłać link aktywacyjny, podaj swój adres e-mail (nie samą nazwę użytkownika).";
+        return;
+      }
+
+      isResending.value = true;
+
+      try {
+        const response = await apiClient.post("/auth/resend-verification", {
+          email: identifier.value
+        });
+
+        const msg =
+          response.data?.message ||
+          "Jeśli konto istnieje, wysłaliśmy ponownie link aktywacyjny.";
+        resendInfo.value = msg;
+        toast.success(msg);
+      } catch (error) {
+        const msg = getUserFriendlyErrorMessage(
+          error,
+          "Nie udało się wysłać linku aktywacyjnego."
+        );
+        resendInfo.value = msg;
+        toast.error(msg);
+      } finally {
+        isResending.value = false;
+      }
+    };
 
     return {
       identifier,
@@ -119,7 +197,11 @@ export default {
       errors,
       loginUser,
       isSubmitting,
-      serverError
+      serverError,
+      canResendVerification,
+      isResending,
+      resendInfo,
+      resendVerification
     };
   }
 };

@@ -6,7 +6,6 @@
         @submit.prevent="registerUser"
         class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md space-y-4"
     >
-      <!-- Globalny błąd z backendu -->
       <div v-if="serverError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
         <p class="font-semibold">Wystąpił błąd:</p>
         <p>{{ serverError }}</p>
