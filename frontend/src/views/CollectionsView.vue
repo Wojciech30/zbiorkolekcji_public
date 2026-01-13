@@ -117,7 +117,7 @@
 
     <!-- Modal dodawania kolekcji -->
     <div v-if="isAddModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-xl flex flex-col" style="max-height: 90vh;">
         <div class="p-6 border-b border-gray-200 flex-shrink-0">
           <h3 class="text-2xl font-semibold">Nowa kolekcja</h3>
         </div>
@@ -185,13 +185,7 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki</label>
-                <input
-                    type="file"
-                    @change="handleFileUpload"
-                    class="input-field"
-                    accept="image/*"
-                    :disabled="isProcessing"
-                />
+                <ImageUploader v-model="newCollection.coverImage" />
               </div>
             </div>
           </div>
@@ -222,7 +216,7 @@
 
     <!-- Modal edycji kolekcji -->
     <div v-if="isEditModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-xl flex flex-col" style="max-height: 90vh;">
         <div class="p-6 border-b border-gray-200 flex-shrink-0">
           <h3 class="text-2xl font-semibold">Edytuj kolekcję</h3>
         </div>
@@ -469,24 +463,24 @@ export default {
       }
     }
 
-    const handleFileUpload = (event) => {
-      newCollection.value.coverImage = event.target.files[0]
-    }
 
     const submitCollection = async () => {
       try {
         isProcessing.value = true
 
-        const formData = new FormData()
-        formData.append('name', newCollection.value.name)
-        formData.append('description', newCollection.value.description)
-        formData.append('category', newCollection.value.category)
-        formData.append('privacy', newCollection.value.privacy)
+        // ImageUploader returns URL string after upload, so we send JSON instead of FormData
+        const payload = {
+          name: newCollection.value.name,
+          description: newCollection.value.description,
+          category: newCollection.value.category,
+          privacy: newCollection.value.privacy
+        }
+        
         if (newCollection.value.coverImage) {
-          formData.append('coverImage', newCollection.value.coverImage)
+          payload.coverImage = newCollection.value.coverImage
         }
 
-        await CollectionService.addCollection(formData)
+        await CollectionService.addCollection(payload)
         toast.success('Kolekcja utworzona pomyślnie!')
 
         pagination.value.page = 1
@@ -637,7 +631,6 @@ export default {
       deleteConfirmation,
       openAddModal,
       closeAddModal,
-      handleFileUpload,
       submitCollection,
       changePage,
       openEditModal,
@@ -680,9 +673,6 @@ export default {
   @apply bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
 }
 
-.input-field {
-  @apply w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors;
-}
 
 .radio {
   @apply text-blue-600 focus:ring-blue-500;

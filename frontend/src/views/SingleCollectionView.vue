@@ -17,6 +17,33 @@
         </router-link>
       </p>
 
+      <!-- Właściciel kolekcji -->
+      <div v-if="collection.owner" class="flex items-center gap-3 mt-4">
+        <router-link 
+          :to="`/users/${collection.owner._id || collection.owner.id}`"
+          class="flex items-center gap-3 group hover:bg-gray-50 rounded-lg p-2 -ml-2 transition-colors"
+        >
+          <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+            <img 
+              v-if="collection.owner.avatar" 
+              :src="getImageUrl(collection.owner.avatar)" 
+              :alt="collection.owner.username"
+              class="w-full h-full object-cover"
+              @error="$event.target.style.display='none'"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">
+              {{ collection.owner.username?.charAt(0).toUpperCase() }}
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Właściciel</p>
+            <p class="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+              {{ collection.owner.username }}
+            </p>
+          </div>
+        </router-link>
+      </div>
+
       <div class="mt-4 flex gap-2">
         <button
           v-if="canEdit && collection.privacy === 'private'"
@@ -200,7 +227,7 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
     >
       <div
-        class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col"
+        class="bg-white rounded-lg shadow-xl w-full max-w-xl flex flex-col"
         style="max-height: 90vh;"
       >
         <div class="p-6 border-b border-gray-200 flex-shrink-0">
@@ -931,9 +958,7 @@ export default {
 .btn-gray {
   @apply bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors;
 }
-.input-field {
-  @apply w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500;
-}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

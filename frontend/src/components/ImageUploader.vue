@@ -54,6 +54,7 @@
 <script>
 import { ref, watch } from 'vue';
 import apiClient from '@/services/apiClient';
+import { resizeImageAsFile } from '@/utils/imageResize';
 
 export default {
   name: 'ImageUploader',
@@ -61,6 +62,14 @@ export default {
     modelValue: {
       type: String,
       default: ''
+    },
+    maxWidth: {
+      type: Number,
+      default: 800
+    },
+    maxHeight: {
+      type: Number,
+      default: 800
     }
   },
   emits: ['update:modelValue', 'uploaded'],
@@ -129,8 +138,11 @@ export default {
         isUploading.value = true;
         uploadProgress.value = 0;
 
+        // Resize image before upload
+        const resizedFile = await resizeImageAsFile(file, props.maxWidth, props.maxHeight);
+
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', resizedFile);
 
         const response = await apiClient.post('/uploads', formData, {
           headers: {

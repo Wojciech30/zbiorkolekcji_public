@@ -104,73 +104,15 @@
       </div>
     </section>
 
-    <!-- Zmiana hasła - WYCENTROWANE -->
-    <section class="bg-white rounded-lg shadow-md p-6">
-      <h2 class="text-2xl font-semibold mb-6 text-center">Zmiana hasła</h2>
-
-      <div
-        v-if="passwordServerError"
-        class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 max-w-md mx-auto"
+    <!-- Zmiana hasła - przycisk otwierający modal -->
+    <section class="bg-white rounded-lg shadow-md p-6 text-center">
+      <h2 class="text-2xl font-semibold mb-4">Bezpieczeństwo</h2>
+      <button
+        @click="showPasswordModal = true"
+        class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-semibold transition-colors"
       >
-        <p class="font-semibold">Wystąpił błąd:</p>
-        <p>{{ passwordServerError }}</p>
-      </div>
-
-      <form @submit.prevent="submitChangePassword" class="space-y-4 max-w-md mx-auto">
-        <div>
-          <label for="currentPassword" class="block font-medium mb-1">Obecne hasło</label>
-          <input
-            v-model="passwordForm.currentPassword"
-            type="password"
-            id="currentPassword"
-            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            :class="{ 'border-red-500': passwordErrors.currentPassword }"
-          />
-          <p v-if="passwordErrors.currentPassword" class="text-red-500 text-sm">
-            {{ passwordErrors.currentPassword }}
-          </p>
-        </div>
-
-        <div>
-          <label for="newPassword" class="block font-medium mb-1">Nowe hasło</label>
-          <input
-            v-model="passwordForm.newPassword"
-            type="password"
-            id="newPassword"
-            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            :class="{ 'border-red-500': passwordErrors.newPassword }"
-          />
-          <p v-if="passwordErrors.newPassword" class="text-red-500 text-sm">
-            {{ passwordErrors.newPassword }}
-          </p>
-        </div>
-
-        <div>
-          <label for="confirmPassword" class="block font-medium mb-1">Powtórz nowe hasło</label>
-          <input
-            v-model="passwordForm.confirmPassword"
-            type="password"
-            id="confirmPassword"
-            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            :class="{ 'border-red-500': passwordErrors.confirmPassword }"
-          />
-          <p v-if="passwordErrors.confirmPassword" class="text-red-500 text-sm">
-            {{ passwordErrors.confirmPassword }}
-          </p>
-        </div>
-
-        <div class="text-center">
-          <button
-            type="submit"
-            class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-semibold transition-colors"
-            :class="{ 'opacity-60 cursor-not-allowed': isChangingPassword }"
-            :disabled="isChangingPassword"
-          >
-            <span v-if="!isChangingPassword">Zmień hasło</span>
-            <span v-else>Zmiana hasła...</span>
-          </button>
-        </div>
-      </form>
+        Zmień hasło
+      </button>
     </section>
 
     <!-- Modal zmiany avatara -->
@@ -196,6 +138,89 @@
             <span v-if="!isSavingAvatar">Zapisz</span>
             <span v-else>Zapisywanie...</span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal zmiany hasła -->
+    <div v-if="showPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 90vh;">
+        <div class="p-6 border-b border-gray-200 flex-shrink-0">
+          <h3 class="text-xl font-semibold">Zmiana hasła</h3>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6">
+          <div
+            v-if="passwordServerError"
+            class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
+          >
+            <p class="font-semibold">Wystąpił błąd:</p>
+            <p>{{ passwordServerError }}</p>
+          </div>
+
+          <form @submit.prevent="submitChangePassword" class="space-y-4">
+            <div>
+              <label for="currentPassword" class="block font-medium mb-1">Obecne hasło</label>
+              <input
+                v-model="passwordForm.currentPassword"
+                type="password"
+                id="currentPassword"
+                class="input-field"
+                :class="{ 'border-red-500': passwordErrors.currentPassword }"
+              />
+              <p v-if="passwordErrors.currentPassword" class="text-red-500 text-sm mt-1">
+                {{ passwordErrors.currentPassword }}
+              </p>
+            </div>
+
+            <div>
+              <label for="newPassword" class="block font-medium mb-1">Nowe hasło</label>
+              <input
+                v-model="passwordForm.newPassword"
+                type="password"
+                id="newPassword"
+                class="input-field"
+                :class="{ 'border-red-500': passwordErrors.newPassword }"
+              />
+              <p v-if="passwordErrors.newPassword" class="text-red-500 text-sm mt-1">
+                {{ passwordErrors.newPassword }}
+              </p>
+            </div>
+
+            <div>
+              <label for="confirmPassword" class="block font-medium mb-1">Powtórz nowe hasło</label>
+              <input
+                v-model="passwordForm.confirmPassword"
+                type="password"
+                id="confirmPassword"
+                class="input-field"
+                :class="{ 'border-red-500': passwordErrors.confirmPassword }"
+              />
+              <p v-if="passwordErrors.confirmPassword" class="text-red-500 text-sm mt-1">
+                {{ passwordErrors.confirmPassword }}
+              </p>
+            </div>
+          </form>
+        </div>
+
+        <div class="p-6 border-t border-gray-200 flex-shrink-0">
+          <div class="flex justify-end gap-3">
+            <button
+              @click="closePasswordModal"
+              class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              Anuluj
+            </button>
+            <button
+              @click="submitChangePassword"
+              :disabled="isChangingPassword"
+              class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              :class="{ 'opacity-60 cursor-not-allowed': isChangingPassword }"
+            >
+              <span v-if="!isChangingPassword">Zmień hasło</span>
+              <span v-else>Zmiana hasła...</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -241,6 +266,9 @@ export default {
     const showAvatarModal = ref(false);
     const newAvatarUrl = ref("");
     const isSavingAvatar = ref(false);
+
+    // Password modal
+    const showPasswordModal = ref(false);
 
     const isChangingPassword = ref(false);
     const passwordServerError = ref("");
@@ -360,6 +388,9 @@ export default {
         passwordForm.currentPassword = "";
         passwordForm.newPassword = "";
         passwordForm.confirmPassword = "";
+        
+        // Close modal on success
+        showPasswordModal.value = false;
       } catch (error) {
         console.error("Błąd zmiany hasła:", error);
         const msg = getUserFriendlyErrorMessage(error, "Nie udało się zmienić hasła.");
@@ -368,6 +399,17 @@ export default {
       } finally {
         isChangingPassword.value = false;
       }
+    };
+
+    const closePasswordModal = () => {
+      showPasswordModal.value = false;
+      passwordServerError.value = "";
+      passwordForm.currentPassword = "";
+      passwordForm.newPassword = "";
+      passwordForm.confirmPassword = "";
+      passwordErrors.currentPassword = "";
+      passwordErrors.newPassword = "";
+      passwordErrors.confirmPassword = "";
     };
 
     onMounted(() => {
@@ -389,7 +431,9 @@ export default {
       showAvatarModal,
       newAvatarUrl,
       isSavingAvatar,
-      saveAvatar
+      saveAvatar,
+      showPasswordModal,
+      closePasswordModal
     };
   }
 };
