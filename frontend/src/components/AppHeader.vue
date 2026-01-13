@@ -29,7 +29,7 @@
 
           <template v-else>
             <router-link
-                to="/moje-kolekcje"
+                to="/my-collections"
                 class="nav-link"
                 active-class="nav-link-active"
             >
@@ -92,7 +92,7 @@
 
           <template v-else>
             <router-link
-                to="/moje-kolekcje"
+                to="/my-collections"
                 class="mobile-nav-link"
                 active-class="mobile-nav-link-active"
                 @click="isMobileMenuOpen = false"

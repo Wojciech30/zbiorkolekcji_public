@@ -1,6 +1,7 @@
 import express from "express";
 import Category from "../models/Category.js";
 import Collection from "../models/Collection.js";
+import Item from "../models/Item.js";
 import authenticateToken from "../middleware/authenticateToken.js";
 import checkAdmin from "../middleware/checkAdmin.js";
 import mongoose from "mongoose";
@@ -80,7 +81,7 @@ router.get("/:id", async (req, res) => {
         res.json({
             code: "CATEGORY_FETCHED",
             message: "Pomyślnie pobrano kategorię",
-            data: {
+            category: {
                 _id: category._id,
                 name: category.name,
                 description: category.description,
@@ -172,17 +173,20 @@ router.get('/:id/collections', async (req, res) => {
             })
         ]);
 
+        const collectionsWithCounts = await Promise.all(collections.map(async (col) => {
+            const itemsCount = await Item.countDocuments({ collectionId: col._id });
+            return { ...col, itemsCount, likesCount: col.likes?.length || 0 };
+        }));
+
         res.json({
             code: 'CATEGORY_COLLECTIONS_FETCHED',
             message: 'Pomyślnie pobrano kolekcje kategorii',
-            data: {
-                category: {
-                    _id: category._id,
-                    name: category.name,
-                    description: category.description
-                },
-                collections
+            category: {
+                _id: category._id,
+                name: category.name,
+                description: category.description
             },
+            collections: collectionsWithCounts,
             pagination: {
                 total,
                 page,

@@ -43,5 +43,9 @@ export default {
     resetPassword({ token, newPassword }) {
         return apiClient.post('/auth/reset-password', { token, newPassword })
             .then(r => r.data);
+    },
+    updateAvatar(avatarData) {
+        return apiClient.put('/auth/update-avatar', avatarData)
+            .then(r => r.data);
     }
 };

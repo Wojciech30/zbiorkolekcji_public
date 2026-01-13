@@ -1,16 +1,16 @@
 <template>
   <div class="container mx-auto p-4">
-    <header>
+    <header class="mb-8">
       <h1 class="text-4xl font-bold text-gray-800 mb-2">{{ category.name }}</h1>
       <p class="text-gray-600 text-lg italic" v-if="category.description">{{ category.description }}</p>
-      <p class="text-gray-500 text-sm" v-else>Brak opisu kategorii</p>
+      <!-- Usunięto: <p class="text-gray-500 text-sm" v-else>Brak opisu kategorii</p> zgodnie z prośbą -->
     </header>
 
     <section class="mt-8">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-semibold text-gray-700">
           Kolekcje w tej kategorii
-          <span class="text-gray-500 text-lg">({{ collections.length }})</span>
+          <span class="text-gray-500 text-lg">({{ pagination.total }})</span>
         </h2>
 
         <!-- Paginacja -->
@@ -46,35 +46,49 @@
         <p class="text-gray-500">Brak kolekcji w tej kategorii</p>
       </div>
 
-      <!-- Lista kolekcji -->
+      <!-- Lista kolekcji (Ujednolicona z CollectionsView) -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
             v-for="collection in collections"
             :key="collection._id"
-            class="p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
+            class="group p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
         >
           <router-link
               :to="`/collections/${collection._id}`"
-              class="block group"
+              class="block"
           >
-            <div class="mb-4 relative">
+             <!-- Okładka -->
+             <div class="mb-4 relative h-48 overflow-hidden rounded-lg bg-gray-100">
               <img
-                  :src="collection.coverImage || '/placeholder-collection.jpg'"
+                  :src="collection.coverImage ? getImageUrl(collection.coverImage) : '/placeholder-collection.svg'"
                   alt="Okładka kolekcji"
-                  class="w-full h-48 object-cover rounded-lg mb-3"
-              >
+                  class="w-full h-full object-cover"
+                  @error="$event.target.src = '/placeholder-collection.svg'"
+              />
             </div>
 
             <h3 class="text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition">
               {{ collection.name }}
             </h3>
-            <p class="text-gray-600 mt-2 line-clamp-2">{{ collection.description }}</p>
+            
+            <p v-if="collection.description" class="text-gray-600 mt-2 line-clamp-2">
+              {{ collection.description }}
+            </p>
 
-            <div class="mt-4 flex items-center text-sm text-gray-500">
-              <span class="mx-2">•</span>
-              <time :datetime="collection.createdAt">
-                {{ formatDate(collection.createdAt) }}
-              </time>
+             <!-- Statystyki -->
+            <div class="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
+              <div class="flex items-center gap-1">
+                <UserIcon class="w-4 h-4" />
+                <span>{{ collection.owner?.username }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <DocumentTextIcon class="w-4 h-4" />
+                <span>{{ collection.itemsCount || 0 }} elementów</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <EyeIcon class="w-4 h-4" />
+                <span>{{ collection.views || 0 }} wyświetleń</span>
+              </div>
             </div>
           </router-link>
         </div>
@@ -85,8 +99,16 @@
 
 <script>
 import CategoryService from '@/services/CategoryService'
+import { getImageUrl } from '@/utils/imageUrl'
+import { UserIcon, DocumentTextIcon, EyeIcon } from '@heroicons/vue/24/outline'
 
 export default {
+  name: "CategoryView",
+  components: {
+    UserIcon,
+    DocumentTextIcon,
+    EyeIcon
+  },
   data() {
     return {
       category: {},
@@ -107,6 +129,7 @@ export default {
     }
   },
   methods: {
+    getImageUrl, // Udostępnij helper w template
     async loadData() {
       try {
         this.isLoading = true
@@ -126,12 +149,12 @@ export default {
           })
         ])
 
-        if (!categoryRes?.data?.data || !collectionsRes?.data?.data?.collections) {
+        if (!categoryRes?.data?.category || !collectionsRes?.data?.collections) {
           throw new Error('Nieprawidłowa struktura odpowiedzi API')
         }
 
-        this.category = categoryRes.data.data
-        this.collections = collectionsRes.data.data.collections
+        this.category = categoryRes.data.category
+        this.collections = collectionsRes.data.collections
         this.pagination = {
           ...this.pagination,
           total: collectionsRes.data.pagination?.total || 0,
@@ -182,7 +205,6 @@ export default {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

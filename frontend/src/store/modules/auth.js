@@ -7,31 +7,50 @@ export default {
     state: () => ({
         user: (() => {
             try {
-                return JSON.parse(localStorage.getItem("user"));
+                // Sprawdź oba storage przy inicjalizacji
+                const localUser = localStorage.getItem("user");
+                const sessionUser = sessionStorage.getItem("user");
+                return JSON.parse(localUser || sessionUser);
             } catch {
                 return null;
             }
         })(),
-        accessToken: localStorage.getItem("accessToken"),
-        refreshToken: localStorage.getItem("refreshToken")
+        accessToken: localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"),
+        refreshToken: localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken")
     }),
 
     mutations: {
-        SET_USER(state, user) {
+        SET_USER(state, { user, rememberMe }) {
             state.user = user;
-            if (user) localStorage.setItem("user", JSON.stringify(user));
-            else localStorage.removeItem("user");
+            const storage = rememberMe ? localStorage : sessionStorage;
+
+            if (user) {
+                storage.setItem("user", JSON.stringify(user));
+                if (rememberMe) {
+                    localStorage.setItem("rememberMe", "true");
+                }
+            } else {
+                localStorage.removeItem("user");
+                sessionStorage.removeItem("user");
+            }
         },
 
-        SET_TOKENS(state, { accessToken, refreshToken }) {
+        SET_TOKENS(state, { accessToken, refreshToken, rememberMe }) {
             state.accessToken = accessToken;
             state.refreshToken = refreshToken;
+            const storage = rememberMe ? localStorage : sessionStorage;
 
-            if (accessToken) localStorage.setItem("accessToken", accessToken);
-            else localStorage.removeItem("accessToken");
+            if (accessToken) storage.setItem("accessToken", accessToken);
+            else {
+                localStorage.removeItem("accessToken");
+                sessionStorage.removeItem("accessToken");
+            }
 
-            if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
-            else localStorage.removeItem("refreshToken");
+            if (refreshToken) storage.setItem("refreshToken", refreshToken);
+            else {
+                localStorage.removeItem("refreshToken");
+                sessionStorage.removeItem("refreshToken");
+            }
         },
 
         LOGOUT(state) {
@@ -39,15 +58,21 @@ export default {
             state.refreshToken = null;
             state.user = null;
 
+            // Wyczyść oba storage
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("user");
+            localStorage.removeItem("rememberMe");
+            sessionStorage.removeItem("accessToken");
+            sessionStorage.removeItem("refreshToken");
+            sessionStorage.removeItem("user");
         }
     },
 
     actions: {
         async login({ commit }, credentials) {
-            const response = await AuthService.login(credentials);
+            const { rememberMe, ...loginData } = credentials;
+            const response = await AuthService.login(loginData);
 
             if (!response?.accessToken || !response?.refreshToken) {
                 throw new Error("Nieprawidłowa odpowiedź serwera");
@@ -55,18 +80,19 @@ export default {
 
             commit("SET_TOKENS", {
                 accessToken: response.accessToken,
-                refreshToken: response.refreshToken
+                refreshToken: response.refreshToken,
+                rememberMe
             });
 
-            commit("SET_USER", response.user);
+            commit("SET_USER", { user: response.user, rememberMe });
 
             return response;
         },
-        
+
         async logout({ commit, state }) {
             try {
                 if (state.refreshToken) {
-                    await AuthService.logout(state.refreshToken).catch(() => {});
+                    await AuthService.logout(state.refreshToken).catch(() => { });
                 }
             } catch {
                 // ignorujemy błędy backendu
@@ -74,7 +100,7 @@ export default {
 
             commit("LOGOUT");
 
-            await router.push({ name: "Login" }).catch(() => {});
+            await router.push({ name: "Login" }).catch(() => { });
         },
 
         async refreshToken({ commit, state }) {
@@ -84,10 +110,12 @@ export default {
 
             try {
                 const response = await AuthService.refreshToken(state.refreshToken);
+                const rememberMe = localStorage.getItem("rememberMe") === "true";
 
                 commit("SET_TOKENS", {
                     accessToken: response.accessToken,
-                    refreshToken: response.refreshToken
+                    refreshToken: response.refreshToken,
+                    rememberMe
                 });
 
                 return response.accessToken;
@@ -101,6 +129,7 @@ export default {
 
     getters: {
         isAuthenticated: state => !!state.user,
-        isAdmin: state => state.user?.role === "admin"
+        isAdmin: state => state.user?.role === "admin",
+        isBlocked: state => state.user?.isActive === false
     }
 };

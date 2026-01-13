@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import 'dotenv/config';
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -9,13 +11,21 @@ import categoriesRouter from "./routes/categories.js";
 import authRouter from "./routes/auth.js";
 import collectionsRouter from "./routes/collections.js";
 import itemsRouter from "./routes/items.js";
+import adminRouter from "./routes/admin.js";
+import uploadsRouter from "./routes/uploads.js";
 import errorHandler from "./middleware/errorHandler.js";
 import mongoose from "mongoose";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // 1. Konfiguracja bezpieczeństwa
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false // Wyłączamy CSP dla obrazków
+}));
 app.use(cors({
     origin: process.env.CORS_ORIGIN?.split(',') || ["http://172.23.52.141:8080"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -51,6 +61,11 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/collections", collectionsRouter);
 app.use("/api/v1/categories", categoriesRouter);
 app.use("/api/v1/items", itemsRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/uploads", uploadsRouter);
+
+// 6.5 Serwowanie plików statycznych (uploads)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // 7. Testowa trasa
 app.get("/api/v1/healthcheck", (req, res) => {

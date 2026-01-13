@@ -1,249 +1,603 @@
 import express from "express";
+import mongoose from "mongoose";
 import Item from "../models/Item.js";
 import Collection from "../models/Collection.js";
 import Category from "../models/Category.js";
 import authenticateToken from "../middleware/authenticateToken.js";
-import verifyCollectionOwnerOnly from "../middleware/verifyCollectionOwnerOnly.js";
+import optionalAuthenticate from "../middleware/optionalAuthenticate.js";
+import validateObjectId from "../middleware/validateObjectId.js";
 
 const router = express.Router();
 
 const handleError = (res, error, defaultMessage) => {
-    console.error(error);
-    const response = {
-        code: "ITEM_ERROR",
-        message: error.message || defaultMessage,
-    };
-    if (error.name === "ValidationError") {
-        response.details = Object.values(error.errors).map((e) => e.message);
-        return res.status(400).json(response);
-    }
-    res.status(500).json(response);
+  console.error(error);
+  const response = {
+    code: "ITEM_ERROR",
+    message: error?.message || defaultMessage
+  };
+
+  if (error?.name === "ValidationError") {
+    response.details = Object.values(error.errors).map(e => e.message);
+    return res.status(400).json(response);
+  }
+
+  return res.status(500).json(response);
 };
 
-const setParentCollectionForUpdate = async (req, res, next) => {
-    if (!req.body.parentCollection) {
-        const item = await Item.findById(req.params.id);
-        if (item) {
-            req.body.parentCollection = item.parentCollection;
-        }
-    }
-    next();
+const loadCollectionWithCategory = async (collectionId) => {
+  const collection = await Collection.findById(collectionId).populate("category");
+  if (!collection) return null;
+  const category = await Category.findById(collection.category);
+  return { collection, category };
 };
 
-const validateAttributes = async (req, res, next) => {
-    try {
-        const collection = await Collection.findById(req.body.parentCollection).populate("category");
-        if (!collection) {
-            return res.status(404).json({
-                code: "COLLECTION_NOT_FOUND",
-                message: "Kolekcja nie istnieje",
-            });
-        }
-        const category = await Category.findById(collection.category);
-        const attributesSchema = new Map(category.attributes.map(attr => [attr.name, attr]));
-        const errors = [];
-        const attributes = req.body.attributes || {};
-        for (const [name, schema] of attributesSchema) {
-            if (schema.required && !(name in attributes)) {
-                errors.push(`Atrybut '${name}' jest wymagany`);
-            }
-        }
-        for (const [name, value] of Object.entries(attributes)) {
-            const schema = attributesSchema.get(name);
-            if (!schema) {
-                errors.push(`Nieznany atrybut '${name}'`);
-                continue;
-            }
-            let actualValue;
-            let actualType = schema.type;
-            if (value && typeof value === "object" && "value" in value) {
-                actualValue = value.value;
-                if (value.type && value.type !== schema.type) {
-                    errors.push(`Nieprawidłowy typ dla atrybutu '${name}'. Oczekiwano ${schema.type}, otrzymano ${value.type}.`);
-                }
-            } else {
-                actualValue = value;
-            }
+const canReadCollection = (collection, user) => {
+  if (!collection) return false;
+  if (collection.privacy === "public") return true;
 
-            if (schema.type === 'number') {
-                actualValue = Number(actualValue);
-                if (isNaN(actualValue)) {
-                    errors.push(`Nieprawidłowa wartość liczbowa dla atrybutu '${name}'.`);
-                }
-            }
-            else if (schema.type === 'boolean') {
-                actualValue = String(actualValue).toLowerCase() === 'true';
-            }
+  if (!user) return false;
 
-            if (typeof actualValue !== schema.type && schema.type !== 'select') {
-                errors.push(`Nieprawidłowy typ dla atrybutu '${name}'. Oczekiwano ${schema.type}, otrzymano ${typeof actualValue}.`);
-            }
-            if (schema.type !== "select" && typeof actualValue !== schema.type) {
-                errors.push(
-                    `Nieprawidłowy typ dla atrybutu '${name}'. Oczekiwano ${schema.type}, otrzymano ${typeof actualValue}.`
-                );
-            }
-        }
-        if (errors.length > 0) {
-            return res.status(400).json({
-                code: "INVALID_ATTRIBUTES",
-                message: "Błędy w atrybutach",
-                errors,
-            });
-        }
-        req.collection = collection;
-        next();
-    } catch (error) {
-        handleError(res, error, "Błąd walidacji atrybutów");
-    }
+  const userId = user._id.toString();
+  const isOwner = collection.owner.toString() === userId;
+  const isAdmin = user.role === "admin";
+  const isAllowed = (collection.allowedUsers || []).some(u => u.toString() === userId);
+
+  return isOwner || isAdmin || isAllowed;
 };
 
-router.post("/", authenticateToken, validateAttributes, verifyCollectionOwnerOnly, async (req, res) => {
-    try {
-        const item = await Item.create({
-            ...req.body,
-            createdBy: req.user._id,
-        });
-        res.status(201).json({
-            code: "ITEM_CREATED",
-            item: item.toJSON(),
-        });
-    } catch (error) {
-        handleError(res, error, "Błąd tworzenia przedmiotu");
+const canWriteCollection = (collection, user) => {
+  if (!collection || !user) return false;
+  const userId = user._id.toString();
+  const isOwner = collection.owner.toString() === userId;
+  const isAdmin = user.role === "admin";
+  return isOwner || isAdmin;
+};
+
+// Normalizacja typu - 'text' jako alias dla 'string'
+const normalizeType = (type) => {
+  if (type === "text") return "string";
+  return type;
+};
+
+const normalizeAttributesInput = (incomingAttributes) => {
+  const attrs = incomingAttributes && typeof incomingAttributes === "object" ? incomingAttributes : {};
+  const normalized = {};
+
+  for (const [name, value] of Object.entries(attrs)) {
+    if (value && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, "value")) {
+      normalized[name] = {
+        type: normalizeType(value.type),
+        value: value.value
+      };
+    } else {
+      normalized[name] = { value };
     }
+  }
+
+  return normalized;
+};
+
+const isValidUrl = (v) => typeof v === "string" && /^(http|https):\/\/[^ "]+$/.test(v);
+const isValidDateString = (v) => typeof v === "string" && !Number.isNaN(Date.parse(v));
+
+const castAndValidateValue = (schema, raw) => {
+  const type = schema.type;
+
+  if (type === "number") {
+    const num = Number(raw);
+    if (Number.isNaN(num)) return { ok: false, value: null, error: `Nieprawidłowa wartość liczbowa` };
+    return { ok: true, value: num };
+  }
+
+  if (type === "boolean") {
+    if (typeof raw === "boolean") return { ok: true, value: raw };
+    const s = String(raw).toLowerCase();
+    if (s === "true") return { ok: true, value: true };
+    if (s === "false") return { ok: true, value: false };
+    return { ok: false, value: null, error: `Nieprawidłowa wartość logiczna (true/false)` };
+  }
+
+  if (type === "date") {
+    if (!isValidDateString(raw)) return { ok: false, value: null, error: `Nieprawidłowa data` };
+    return { ok: true, value: String(raw) };
+  }
+
+  if (type === "url") {
+    if (!isValidUrl(raw)) return { ok: false, value: null, error: `Nieprawidłowy URL` };
+    return { ok: true, value: String(raw) };
+  }
+
+  if (type === "select") {
+    const v = String(raw ?? "");
+    const options = Array.isArray(schema.options) ? schema.options : [];
+    if (!options.includes(v)) return { ok: false, value: null, error: `Wartość spoza dozwolonych opcji` };
+    return { ok: true, value: v };
+  }
+
+  return { ok: true, value: String(raw ?? "") };
+};
+
+const validateAndBuildAttributes = (category, incomingAttributes, { mode, existingAttributes }) => {
+  const defs = Array.isArray(category?.attributes) ? category.attributes : [];
+  const normalizedIncoming = normalizeAttributesInput(incomingAttributes);
+  const errors = [];
+  const result = {};
+
+  const existing = existingAttributes && typeof existingAttributes === "object"
+    ? existingAttributes
+    : {};
+
+  for (const def of defs) {
+    const key = def.name;
+
+    const incoming = normalizedIncoming[key];
+    const hasIncoming = incoming !== undefined;
+
+    if (mode === "create") {
+      if (def.required && (!hasIncoming || incoming.value === undefined || incoming.value === null || String(incoming.value).trim() === "")) {
+        errors.push(`Atrybut '${key}' jest wymagany`);
+        continue;
+      }
+    }
+
+    if (!hasIncoming) {
+      if (mode === "update") {
+        const prev = existing[key];
+        if (prev) {
+          result[key] = prev;
+          continue;
+        }
+        if (def.required) {
+          errors.push(`Atrybut '${key}' jest wymagany`);
+          continue;
+        }
+        continue;
+      }
+
+      if (def.required) {
+        errors.push(`Atrybut '${key}' jest wymagany`);
+      }
+      continue;
+    }
+
+    const providedType = incoming.type;
+    if (providedType && providedType !== def.type) {
+      errors.push(`Nieprawidłowy typ dla atrybutu '${key}'. Oczekiwano ${def.type}, otrzymano ${providedType}.`);
+    }
+
+    const { ok, value, error } = castAndValidateValue(def, incoming.value);
+    if (!ok) {
+      errors.push(`Atrybut '${key}': ${error}`);
+      continue;
+    }
+
+    result[key] = { type: def.type, value };
+  }
+
+  for (const key of Object.keys(normalizedIncoming)) {
+    const existsInDefs = defs.some(d => d.name === key);
+    if (!existsInDefs) errors.push(`Nieznany atrybut '${key}'`);
+  }
+
+  return { ok: errors.length === 0, errors, attributes: result };
+};
+
+const loadItem = async (req, res, next) => {
+  try {
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({
+        code: "ITEM_NOT_FOUND",
+        message: "Przedmiot nie istnieje"
+      });
+    }
+    req.item = item;
+    return next();
+  } catch (error) {
+    return handleError(res, error, "Błąd pobierania przedmiotu");
+  }
+};
+
+const normalizeImagesInput = (body) => {
+  const out = [];
+
+  if (Array.isArray(body.images)) {
+    for (const v of body.images) {
+      if (typeof v === "string" && v.trim()) out.push(v.trim());
+    }
+  }
+
+  if (typeof body.imageUrl === "string" && body.imageUrl.trim()) {
+    out.push(body.imageUrl.trim());
+  }
+
+  return out;
+};
+
+router.post("/", authenticateToken, async (req, res) => {
+  try {
+    const { parentCollection } = req.body;
+
+    if (!parentCollection || !mongoose.Types.ObjectId.isValid(parentCollection)) {
+      return res.status(400).json({
+        code: "INVALID_COLLECTION_ID",
+        message: "Nieprawidłowe parentCollection"
+      });
+    }
+
+    const loaded = await loadCollectionWithCategory(parentCollection);
+    if (!loaded) {
+      return res.status(404).json({
+        code: "COLLECTION_NOT_FOUND",
+        message: "Kolekcja nie istnieje"
+      });
+    }
+
+    const { collection, category } = loaded;
+
+    if (!canWriteCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "ITEM_CREATE_FORBIDDEN",
+        message: "Nie masz uprawnień do dodawania przedmiotów w tej kolekcji"
+      });
+    }
+
+    const { ok, errors, attributes } = validateAndBuildAttributes(
+      category,
+      req.body.attributes,
+      { mode: "create" }
+    );
+
+    if (!ok) {
+      return res.status(400).json({
+        code: "INVALID_ATTRIBUTES",
+        message: "Błędy w atrybutach",
+        errors
+      });
+    }
+
+    const images = normalizeImagesInput(req.body);
+
+    const item = await Item.create({
+      name: req.body.name,
+      description: req.body.description,
+      parentCollection,
+      images,
+      attributes,
+      createdBy: req.user._id
+    });
+
+    return res.status(201).json({
+      code: "ITEM_CREATED",
+      item: item.toJSON()
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd tworzenia przedmiotu");
+  }
 });
 
-router.get("/:id", async (req, res) => {
-    try {
-        const item = await Item.findById(req.params.id)
-            .populate("parentCollection", "name")
-            .populate("createdBy", "username email")
-            .lean();
-        if (!item) {
-            return res.status(404).json({
-                code: "ITEM_NOT_FOUND",
-                message: "Przedmiot nie istnieje",
-            });
-        }
-        res.json({
-            code: "ITEM_FETCHED",
-            item,
-        });
-    } catch (error) {
-        handleError(res, error, "Błąd pobierania przedmiotu");
+router.get("/:id", validateObjectId, optionalAuthenticate, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id)
+      .populate("parentCollection")
+      .populate("createdBy", "username email")
+      .lean();
+
+    if (!item) {
+      return res.status(404).json({
+        code: "ITEM_NOT_FOUND",
+        message: "Przedmiot nie istnieje"
+      });
     }
+
+    const collection = item.parentCollection;
+    if (!canReadCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "COLLECTION_ACCESS_DENIED",
+        message: "Nie masz dostępu do tej kolekcji"
+      });
+    }
+
+    return res.json({
+      code: "ITEM_FETCHED",
+      item
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd pobierania przedmiotu");
+  }
 });
 
-router.patch(
-    "/:id",
-    authenticateToken,
-    setParentCollectionForUpdate,
-    validateAttributes,
-    async (req, res) => {
-        try {
-            const item = await Item.findById(req.params.id);
-            if (!item) {
-                return res.status(404).json({
-                    code: "ITEM_NOT_FOUND",
-                    message: "Przedmiot nie istnieje",
-                });
-            }
-            const isOwner = item.createdBy.toString() === req.user._id.toString();
-            const isAdmin = req.user.role === "admin";
-            const canEdit = isOwner || isAdmin || req.collection.privacy === "public";
-            if (!canEdit) {
-                return res.status(403).json({
-                    code: "EDIT_DENIED",
-                    message: "Brak uprawnień do edycji",
-                });
-            }
+router.patch("/:id", validateObjectId, authenticateToken, loadItem, async (req, res) => {
+  try {
+    const parentCollection = req.item.parentCollection;
 
-            // Pobierz definicje atrybutów z kategorii
-            const categoryAttributes = req.collection.category.attributes;
-            // Pobierz istniejące atrybuty z przedmiotu (jako obiekt zwykły)
-            const existingAttributes = item.attributes ? item.attributes.toObject() : {};
-            // Pobierz atrybuty przesłane w żądaniu
-            const incomingAttributes = req.body.attributes || {};
-
-            // Budujemy nowy obiekt atrybutów
-            const mergedAttributes = {};
-            for (const attrDef of categoryAttributes) {
-                const key = attrDef.name;
-                let oldValue = existingAttributes[key];
-                let incoming = incomingAttributes[key];
-                if (incoming === undefined) {
-                    // Jeśli nie przesłano atrybutu, zachowujemy starą wartość lub ustawiamy domyślnie
-                    mergedAttributes[key] =
-                        oldValue || { type: attrDef.type, value: attrDef.type === "number" ? 0 : "" };
-                } else if (typeof incoming === "object" && incoming !== null && "value" in incoming) {
-                    mergedAttributes[key] = incoming;
-                } else {
-                    mergedAttributes[key] = { type: attrDef.type, value: incoming };
-                }
-            }
-            req.body.attributes = mergedAttributes;
-
-            const updatedItem = await Item.findByIdAndUpdate(req.params.id, req.body, {
-                new: true,
-                runValidators: true,
-            });
-            res.json({
-                code: "ITEM_UPDATED",
-                item: updatedItem.toJSON(),
-            });
-        } catch (error) {
-            handleError(res, error, "Błąd aktualizacji przedmiotu");
-        }
+    const loaded = await loadCollectionWithCategory(parentCollection);
+    if (!loaded) {
+      return res.status(404).json({
+        code: "COLLECTION_NOT_FOUND",
+        message: "Kolekcja nie istnieje"
+      });
     }
-);
 
-router.delete("/:id", authenticateToken, async (req, res) => {
-    try {
-        const item = await Item.findById(req.params.id);
-        if (!item) {
-            return res.status(404).json({
-                code: "ITEM_NOT_FOUND",
-                message: "Przedmiot nie istnieje",
-            });
-        }
-        const isOwner = item.createdBy.toString() === req.user._id.toString();
-        const isAdmin = req.user.role === "admin";
-        if (!isOwner && !isAdmin) {
-            return res.status(403).json({
-                code: "DELETE_DENIED",
-                message: "Brak uprawnień do usunięcia",
-            });
-        }
-        await item.deleteOne();
-        res.status(204).end();
-    } catch (error) {
-        handleError(res, error, "Błąd usuwania przedmiotu");
+    const { collection, category } = loaded;
+
+    if (!canWriteCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "ITEM_UPDATE_FORBIDDEN",
+        message: "Nie masz uprawnień do edycji przedmiotów w tej kolekcji"
+      });
     }
+
+    const existingAttributes = req.item.attributes ? req.item.attributes.toObject() : {};
+    const incomingAttributes = req.body.attributes;
+
+    let attributes = existingAttributes;
+    if (incomingAttributes !== undefined) {
+      const validated = validateAndBuildAttributes(
+        category,
+        incomingAttributes,
+        { mode: "update", existingAttributes }
+      );
+
+      if (!validated.ok) {
+        return res.status(400).json({
+          code: "INVALID_ATTRIBUTES",
+          message: "Błędy w atrybutach",
+          errors: validated.errors
+        });
+      }
+
+      attributes = validated.attributes;
+    }
+
+    const allowedUpdates = ["name", "description"];
+    const updates = {};
+
+    for (const key of allowedUpdates) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+
+    if (req.body.images !== undefined || req.body.imageUrl !== undefined) {
+      updates.images = normalizeImagesInput(req.body);
+    }
+
+    updates.attributes = attributes;
+
+    const updatedItem = await Item.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+      runValidators: true
+    });
+
+    return res.json({
+      code: "ITEM_UPDATED",
+      item: updatedItem.toJSON()
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd aktualizacji przedmiotu");
+  }
+});
+
+router.delete("/:id", validateObjectId, authenticateToken, loadItem, async (req, res) => {
+  try {
+    const loaded = await loadCollectionWithCategory(req.item.parentCollection);
+    if (!loaded) {
+      return res.status(404).json({
+        code: "COLLECTION_NOT_FOUND",
+        message: "Kolekcja nie istnieje"
+      });
+    }
+
+    const { collection } = loaded;
+
+    if (!canWriteCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "ITEM_DELETE_FORBIDDEN",
+        message: "Nie masz uprawnień do usunięcia przedmiotu w tej kolekcji"
+      });
+    }
+
+    await req.item.deleteOne();
+    return res.status(204).end();
+  } catch (error) {
+    return handleError(res, error, "Błąd usuwania przedmiotu");
+  }
 });
 
 router.get("/search", async (req, res) => {
-    try {
-        const { query, collection, category } = req.query;
-        const searchFilter = {
-            $text: { $search: query },
-        };
-        if (collection) searchFilter.collection = collection;
-        if (category) {
-            const collections = await Collection.find({ category }).distinct("_id");
-            searchFilter.collection = { $in: collections };
-        }
-        const items = await Item.find(searchFilter)
-            .populate("collection", "name")
-            .limit(50)
-            .lean();
-        res.json({
-            code: "ITEMS_FOUND",
-            count: items.length,
-            items,
-        });
-    } catch (error) {
-        handleError(res, error, "Błąd wyszukiwania");
+  try {
+    const { query, parentCollection, category } = req.query;
+
+    const filter = {};
+    if (query && String(query).trim()) {
+      filter.$text = { $search: String(query).trim() };
     }
+
+    if (parentCollection) {
+      filter.parentCollection = parentCollection;
+    }
+
+    if (category) {
+      const collections = await Collection.find({ category }).distinct("_id");
+      filter.parentCollection = { $in: collections };
+    }
+
+    const items = await Item.find(filter)
+      .populate("parentCollection", "name")
+      .limit(50)
+      .lean();
+
+    return res.json({
+      code: "ITEMS_FOUND",
+      count: items.length,
+      items
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd wyszukiwania");
+  }
+});
+
+// ======================= POLUBIENIA PRZEDMIOTÓW =======================
+router.post("/:id/like", validateObjectId, authenticateToken, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).select("likes likesCount parentCollection");
+    if (!item) {
+      return res.status(404).json({
+        code: "ITEM_NOT_FOUND",
+        message: "Przedmiot nie istnieje"
+      });
+    }
+
+    const collection = await Collection.findById(item.parentCollection);
+    if (!canReadCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "COLLECTION_ACCESS_DENIED",
+        message: "Nie masz dostępu do tej kolekcji"
+      });
+    }
+
+    const userId = req.user._id;
+    const hasLiked = item.likes.some(id => id.equals(userId));
+
+    const updated = await Item.findByIdAndUpdate(
+      req.params.id,
+      hasLiked
+        ? { $pull: { likes: userId }, $inc: { likesCount: -1 } }
+        : { $addToSet: { likes: userId }, $inc: { likesCount: 1 } },
+      { new: true }
+    ).select("likesCount");
+
+    res.json({
+      code: "ITEM_LIKE_UPDATED",
+      liked: !hasLiked,
+      likesCount: updated.likesCount
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd aktualizacji polubień");
+  }
+});
+
+// ======================= KOMENTARZE PRZEDMIOTÓW =======================
+router.get("/:id/comments", validateObjectId, optionalAuthenticate, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id)
+      .select("comments parentCollection")
+      .populate("comments.user", "username");
+
+    if (!item) {
+      return res.status(404).json({
+        code: "ITEM_NOT_FOUND",
+        message: "Przedmiot nie istnieje"
+      });
+    }
+
+    const collection = await Collection.findById(item.parentCollection);
+    if (!canReadCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "COLLECTION_ACCESS_DENIED",
+        message: "Nie masz dostępu do tej kolekcji"
+      });
+    }
+
+    res.json({
+      code: "ITEM_COMMENTS_FETCHED",
+      comments: item.comments
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd pobierania komentarzy");
+  }
+});
+
+router.post("/:id/comments", validateObjectId, authenticateToken, async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({
+        code: "COMMENT_TEXT_REQUIRED",
+        message: "Treść komentarza jest wymagana"
+      });
+    }
+
+    const item = await Item.findById(req.params.id).select("parentCollection");
+    if (!item) {
+      return res.status(404).json({
+        code: "ITEM_NOT_FOUND",
+        message: "Przedmiot nie istnieje"
+      });
+    }
+
+    const collection = await Collection.findById(item.parentCollection);
+    if (!canReadCollection(collection, req.user)) {
+      return res.status(403).json({
+        code: "COLLECTION_ACCESS_DENIED",
+        message: "Nie masz dostępu do tej kolekcji"
+      });
+    }
+
+    const newComment = {
+      user: req.user._id,
+      text: text.trim(),
+      createdAt: new Date()
+    };
+
+    const updated = await Item.findByIdAndUpdate(
+      req.params.id,
+      { $push: { comments: newComment } },
+      { new: true }
+    ).populate("comments.user", "username");
+
+    const addedComment = updated.comments[updated.comments.length - 1];
+
+    res.status(201).json({
+      code: "COMMENT_ADDED",
+      comment: addedComment
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd dodawania komentarza");
+  }
+});
+
+router.delete("/:id/comments/:commentId", validateObjectId, authenticateToken, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).select("comments parentCollection");
+    if (!item) {
+      return res.status(404).json({
+        code: "ITEM_NOT_FOUND",
+        message: "Przedmiot nie istnieje"
+      });
+    }
+
+    const comment = item.comments.id(req.params.commentId);
+    if (!comment) {
+      return res.status(404).json({
+        code: "COMMENT_NOT_FOUND",
+        message: "Komentarz nie istnieje"
+      });
+    }
+
+    const collection = await Collection.findById(item.parentCollection);
+    const isOwner = collection.owner.equals(req.user._id);
+    const isAuthor = comment.user.equals(req.user._id);
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAuthor && !isAdmin) {
+      return res.status(403).json({
+        code: "COMMENT_DELETE_FORBIDDEN",
+        message: "Nie masz uprawnień do usunięcia tego komentarza"
+      });
+    }
+
+    comment.deleteOne();
+    await item.save();
+
+    res.json({
+      code: "COMMENT_DELETED",
+      commentId: req.params.commentId
+    });
+  } catch (error) {
+    return handleError(res, error, "Błąd usuwania komentarza");
+  }
 });
 
 export default router;
+

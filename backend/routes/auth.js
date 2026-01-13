@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/User.js";
 import authenticateToken from "../middleware/authenticateToken.js";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../config/mailer.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -131,7 +132,8 @@ router.post("/login", async (req, res) => {
                 username: user.username,
                 email: user.email,
                 role: user.role,
-                isEmailVerified: user.isEmailVerified
+                isEmailVerified: user.isEmailVerified,
+                isActive: user.isActive
             }
         });
     } catch (error) {
@@ -187,7 +189,14 @@ router.post("/register", async (req, res) => {
 
         const verificationUrl = `${FRONTEND_BASE_URL}/verify-email?token=${emailVerificationToken}`;
 
-        //TODO: dodać wysyłkę maila z verificationUrl
+        // Wyślij email weryfikacyjny
+        try {
+            await sendVerificationEmail(newUser.email, newUser.username, emailVerificationToken);
+        } catch (emailError) {
+            console.error("Błąd wysyłania emaila weryfikacyjnego:", emailError);
+            // Kontynuuj mimo błędu - email można ponownie wysłać
+        }
+
         res.status(201).json({
             user: {
                 id: newUser._id,
@@ -319,6 +328,13 @@ router.post("/resend-verification", async (req, res) => {
 
         const verifyUrl = `${FRONTEND_BASE_URL}/verify-email?token=${newToken}`;
 
+        // Wyślij email weryfikacyjny
+        try {
+            await sendVerificationEmail(user.email, user.username, newToken);
+        } catch (emailError) {
+            console.error("Błąd wysyłania emaila weryfikacyjnego:", emailError);
+        }
+
         return res.json({
             code: "VERIFICATION_LINK_SENT",
             message: "Link aktywacyjny został wysłany ponownie.",
@@ -361,7 +377,13 @@ router.post("/forgot-password", async (req, res) => {
 
         const resetUrl = `${FRONTEND_BASE_URL}/reset-password?token=${resetToken}`;
 
-        // TODO: Dodać wysyłkę maila z resetUrl
+        // Wyślij email z linkiem do resetu hasła
+        try {
+            await sendPasswordResetEmail(user.email, user.username, resetToken);
+        } catch (emailError) {
+            console.error("Błąd wysyłania emaila resetującego hasło:", emailError);
+        }
+
         res.json({
             code: "FORGOT_PASSWORD_EMAIL_SENT",
             message:
@@ -498,6 +520,43 @@ router.post("/change-password", authenticateToken, async (req, res) => {
         });
     } catch (error) {
         console.error("Change password error:", error);
+        res.status(500).json({
+            code: "SERVER_ERROR",
+            message: ERROR_MESSAGES.SERVER_ERROR
+        });
+    }
+});
+
+// ======================= AKTUALIZACJA AVATARA =======================
+router.put("/update-avatar", authenticateToken, async (req, res) => {
+    try {
+        const { avatar } = req.body;
+
+        if (avatar === undefined) {
+            return res.status(400).json({
+                code: "AVATAR_MISSING",
+                message: "Wymagane pole: avatar (URL zdjęcia)"
+            });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({
+                code: "USER_NOT_FOUND",
+                message: "Użytkownik nie został znaleziony"
+            });
+        }
+
+        user.avatar = avatar || "";
+        await user.save();
+
+        res.json({
+            code: "AVATAR_UPDATED",
+            message: "Avatar został zaktualizowany",
+            avatar: user.avatar
+        });
+    } catch (error) {
+        console.error("Update avatar error:", error);
         res.status(500).json({
             code: "SERVER_ERROR",
             message: ERROR_MESSAGES.SERVER_ERROR

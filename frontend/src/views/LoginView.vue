@@ -56,16 +56,45 @@
 
       <div>
         <label for="password" class="block font-bold">Hasło</label>
-        <input
-            v-model="password"
-            id="password"
-            type="password"
-            class="border w-full p-2 rounded"
-            :class="{ 'border-red-500': errors.password }"
-        />
+        <div class="relative">
+          <input
+              v-model="password"
+              id="password"
+              :type="showPassword ? 'text' : 'password'"
+              class="border w-full p-2 pr-10 rounded"
+              :class="{ 'border-red-500': errors.password }"
+          />
+          <button
+            type="button"
+            @click="showPassword = !showPassword"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            <!-- Eye icon (visible) -->
+            <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            <!-- Eye-off icon (hidden) -->
+            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+            </svg>
+          </button>
+        </div>
         <p v-if="errors.password" class="text-red-500 text-sm">
           {{ errors.password }}
         </p>
+      </div>
+
+      <div class="flex items-center">
+        <input
+          v-model="rememberMe"
+          id="rememberMe"
+          type="checkbox"
+          class="h-4 w-4 text-blue-600 rounded"
+        />
+        <label for="rememberMe" class="ml-2 text-gray-700">
+          Nie wylogowuj mnie
+        </label>
       </div>
 
       <button
@@ -91,7 +120,7 @@
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
 import { useToast } from "vue-toastification";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useStore } from "vuex";
 import { ref } from "vue";
 import { normalizeApiError, getUserFriendlyErrorMessage } from "@/utils/errorHandler";
@@ -102,10 +131,13 @@ export default {
   setup() {
     const toast = useToast();
     const router = useRouter();
+    const route = useRoute();
     const store = useStore();
 
     const isSubmitting = ref(false);
     const serverError = ref("");
+    const showPassword = ref(false);
+    const rememberMe = ref(false);
 
     const canResendVerification = ref(false);
     const isResending = ref(false);
@@ -129,9 +161,12 @@ export default {
       resendInfo.value = "";
 
       try {
-        await store.dispatch("auth/login", values);
+        await store.dispatch("auth/login", { ...values, rememberMe: rememberMe.value });
         toast.success("Zalogowano pomyślnie!");
-        await router.push({ name: "Home" });
+        
+        // Redirect to original page or home
+        const redirectTo = route.query.redirect || "/";
+        await router.push(redirectTo);
       } catch (error) {
         const normalized = normalizeApiError(
           error,
@@ -198,6 +233,8 @@ export default {
       loginUser,
       isSubmitting,
       serverError,
+      showPassword,
+      rememberMe,
       canResendVerification,
       isResending,
       resendInfo,

@@ -46,7 +46,7 @@ const routes = [
         meta: { access: "user" }
     },
     {
-        path: "/moje-kolekcje",
+        path: "/my-collections",
         name: "MyCollections",
         component: () => import("@/views/CollectionsView.vue"),
         meta: { access: "user" }
@@ -85,6 +85,12 @@ const routes = [
         meta: { access: "admin" }
     },
     {
+        path: "/blocked",
+        name: "BlockedAccount",
+        component: () => import("@/views/BlockedAccountView.vue"),
+        meta: { access: "blocked" }
+    },
+    {
         path: "/:pathMatch(.*)*",
         name: "NotFound",
         component: () => import("@/views/NotFoundView.vue"),
@@ -109,6 +115,17 @@ router.beforeEach(async (to, from, next) => {
     );
     const isAuthenticated = store.getters["auth/isAuthenticated"];
     const isAdmin = store.getters["auth/isAdmin"];
+    const isBlocked = store.getters["auth/isBlocked"];
+
+    // Zablokowany użytkownik może być tylko na stronie /blocked
+    if (isBlocked && to.name !== "BlockedAccount") {
+        return next({ name: "BlockedAccount" });
+    }
+
+    // Niezablokowany użytkownik nie powinien widzieć strony /blocked
+    if (!isBlocked && to.name === "BlockedAccount") {
+        return next({ name: "Home" });
+    }
 
     if (to.meta.access === "guest" && isAuthenticated) {
         return next({ name: "Home" });

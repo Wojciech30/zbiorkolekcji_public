@@ -67,11 +67,12 @@
           <!-- Klikalny obszar kolekcji -->
           <router-link :to="`/collections/${collection._id}`" class="block">
             <!-- Okładka -->
-            <div class="mb-4 relative h-48 overflow-hidden rounded-lg">
+            <div class="mb-4 relative h-48 overflow-hidden rounded-lg bg-gray-100">
               <img
-                  :src="collection.coverImage || '/placeholder-collection.jpg'"
+                  :src="collection.coverImage ? getImageUrl(collection.coverImage) : '/placeholder-collection.svg'"
                   alt="Okładka kolekcji"
                   class="w-full h-full object-cover"
+                  @error="$event.target.src = '/placeholder-collection.svg'"
               />
             </div>
 
@@ -261,17 +262,17 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kategoria *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kategoria</label>
                 <select
                     v-model="editingCollection.category"
-                    class="input-field"
-                    required
-                    :disabled="isProcessing"
+                    class="input-field bg-gray-100 cursor-not-allowed"
+                    disabled
                 >
                   <option v-for="category in categories" :value="category._id" :key="category._id">
                     {{ category.name }}
                   </option>
                 </select>
+                <p class="text-xs text-gray-500 mt-1">Kategoria nie może być zmieniona po utworzeniu kolekcji.</p>
               </div>
 
               <div>
@@ -300,20 +301,19 @@
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki</label>
+                <ImageUploader v-model="editingCollection.coverImage" />
+              </div>
+
+              <div class="flex items-center gap-2">
                 <input
-                    type="file"
-                    @change="handleEditFileUpload"
-                    class="input-field"
-                    accept="image/*"
-                    :disabled="isProcessing"
+                  type="checkbox"
+                  id="hideDescription"
+                  v-model="editingCollection.hideDescription"
+                  class="w-4 h-4 text-blue-600 rounded"
                 />
-                <div v-if="editingCollection.existingImage || editingCollection.coverImage" class="mt-2">
-                  <img
-                      :src="editingCollection.coverImage ? URL.createObjectURL(editingCollection.coverImage) : editingCollection.existingImage"
-                      class="h-20 w-20 object-cover rounded-lg"
-                      alt="Okładka kolekcji"
-                  />
-                </div>
+                <label for="hideDescription" class="text-sm text-gray-700">
+                  Ukryj opis kolekcji
+                </label>
               </div>
             </div>
           </div>
@@ -382,6 +382,8 @@ import { useToast } from 'vue-toastification'
 import CollectionService from '@/services/CollectionService'
 import CategoryService from '@/services/CategoryService'
 import Spinner from '@/components/AppSpinner.vue'
+import ImageUploader from '@/components/ImageUploader.vue'
+import { getImageUrl } from '@/utils/imageUrl'
 import { PlusIcon, PencilIcon, TrashIcon, UserIcon, DocumentTextIcon, EyeIcon } from '@heroicons/vue/24/outline'
 
 export default {
@@ -393,7 +395,8 @@ export default {
     TrashIcon,
     UserIcon,
     DocumentTextIcon,
-    EyeIcon
+    EyeIcon,
+    ImageUploader
   },
   setup() {
     const router = useRouter()
@@ -431,8 +434,8 @@ export default {
       description: '',
       category: '',
       privacy: 'public',
-      coverImage: null,
-      existingImage: ''
+      coverImage: '',
+      hideDescription: false
     })
 
     const loadCollections = async () => {
@@ -519,11 +522,11 @@ export default {
         editingCollection.value = {
           _id: collection._id,
           name: collection.name,
-          description: collection.description,
+          description: collection.description || '',
           category: collection.category?._id || '',
           privacy: collection.privacy,
-          coverImage: null,
-          existingImage: collection.coverImage
+          coverImage: collection.coverImage || '',
+          hideDescription: collection.hideDescription || false
         }
         isEditModalOpen.value = true
       } catch (error) {
@@ -539,31 +542,30 @@ export default {
         description: '',
         category: '',
         privacy: 'public',
-        coverImage: null,
-        existingImage: ''
+        coverImage: '',
+        hideDescription: false
       }
-    }
-
-    const handleEditFileUpload = (event) => {
-      editingCollection.value.coverImage = event.target.files[0]
     }
 
     const submitEdit = async () => {
       try {
         isProcessing.value = true
 
-        const formData = new FormData()
-        formData.append('name', editingCollection.value.name)
-        formData.append('description', editingCollection.value.description)
-        formData.append('category', editingCollection.value.category)
-        formData.append('privacy', editingCollection.value.privacy)
+        const updates = {
+          name: editingCollection.value.name,
+          description: editingCollection.value.description,
+          privacy: editingCollection.value.privacy,
+          hideDescription: editingCollection.value.hideDescription
+        }
+
+        // Dodaj coverImage tylko jeśli jest ustawiony (URL z ImageUploader)
         if (editingCollection.value.coverImage) {
-          formData.append('coverImage', editingCollection.value.coverImage)
+          updates.coverImage = editingCollection.value.coverImage
         }
 
         const response = await CollectionService.updateCollection(
             editingCollection.value._id,
-            formData
+            updates
         )
 
         const index = collections.value.findIndex(c => c._id === editingCollection.value._id)
@@ -655,11 +657,11 @@ export default {
       changePage,
       openEditModal,
       closeEditModal,
-      handleEditFileUpload,
       submitEdit,
       openDeleteModal,
       closeDeleteModal,
-      confirmDelete
+      confirmDelete,
+      getImageUrl
     }
   }
 }

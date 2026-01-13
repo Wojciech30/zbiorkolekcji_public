@@ -2,7 +2,7 @@
   <div class="container mx-auto p-4">
     <header class="mb-8">
       <h1 class="text-4xl font-bold text-gray-800">Panel Administratora</h1>
-      <p class="text-gray-600 mt-2">Zarządzaj kategoriami i kolekcjami użytkowników</p>
+      <p class="text-gray-600 mt-2">Zarządzaj kategoriami, kolekcjami i użytkownikami</p>
     </header>
 
     <div v-if="loading" class="text-center py-8">
@@ -30,9 +30,7 @@
             <div class="space-y-1">
               <span class="font-medium text-gray-700 block">{{ category.name }}</span>
               <span class="text-sm text-gray-500 block">{{ category.description || "Brak opisu" }}</span>
-              <div class="text-xs text-gray-500">
-                <!-- Usunięto informację o wymagalności pola oraz pole wyświetlania -->
-              </div>
+              <span class="text-xs text-gray-400">{{ category.attributes?.length || 0 }} atrybutów</span>
             </div>
             <div class="flex gap-3">
               <button
@@ -42,36 +40,188 @@
               >
                 Edytuj
               </button>
-              <button
-                  @click="deleteCategory(category._id || category.id)"
-                  class="text-red-600 hover:text-red-800 transition-colors"
-                  :disabled="isProcessing"
-              >
-                Usuń
-              </button>
             </div>
           </li>
         </ul>
       </section>
 
-      <!-- Zarządzanie kolekcjami -->
-      <section class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Wszystkie kolekcje</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div
-              v-for="collection in collections"
-              :key="collection._id"
-              class="p-4 border rounded-lg hover:shadow-lg transition-shadow"
+      <!-- Zarządzanie użytkownikami -->
+      <section class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Zarządzanie użytkownikami</h2>
+        
+        <!-- Wyszukiwarka -->
+        <div class="mb-4">
+          <input
+              v-model="userSearch"
+              @input="debouncedSearchUsers"
+              type="text"
+              placeholder="Szukaj po nazwie użytkownika..."
+              class="input-field max-w-md"
+          />
+        </div>
+
+        <!-- Lista użytkowników -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="p-3 text-sm font-semibold text-gray-700">Nazwa użytkownika</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Email</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Rola</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Status</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Ostatnie logowanie</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Akcje</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                  v-for="user in users" 
+                  :key="user._id"
+                  class="border-b border-gray-100 hover:bg-gray-50"
+              >
+                <td class="p-3 text-gray-800">{{ user.username }}</td>
+                <td class="p-3 text-gray-600">{{ user.email }}</td>
+                <td class="p-3">
+                  <span 
+                      :class="user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'"
+                      class="px-2 py-1 rounded-full text-xs font-medium"
+                  >
+                    {{ user.role === 'admin' ? 'Administrator' : 'Użytkownik' }}
+                  </span>
+                </td>
+                <td class="p-3">
+                  <span 
+                      :class="user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      class="px-2 py-1 rounded-full text-xs font-medium"
+                  >
+                    {{ user.isActive ? 'Aktywny' : 'Zablokowany' }}
+                  </span>
+                </td>
+                <td class="p-3 text-gray-600 text-sm">
+                  {{ user.lastLogin ? formatDate(user.lastLogin) : 'Nigdy' }}
+                </td>
+                <td class="p-3">
+                  <button
+                      v-if="user.role !== 'admin' && user.isActive"
+                      @click="openBlockConfirmModal(user)"
+                      class="text-red-600 hover:text-red-800 transition-colors text-sm"
+                      :disabled="isProcessing"
+                  >
+                    Zablokuj
+                  </button>
+                  <button
+                      v-else-if="user.role !== 'admin' && !user.isActive"
+                      @click="unblockUser(user)"
+                      class="text-green-600 hover:text-green-800 transition-colors text-sm"
+                      :disabled="isProcessing"
+                  >
+                    Odblokuj
+                  </button>
+                  <span v-else class="text-gray-400 text-sm">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginacja użytkowników -->
+        <div v-if="usersPagination.pages > 1" class="flex justify-center gap-2 mt-4">
+          <button 
+              @click="loadUsers(usersPagination.page - 1)"
+              :disabled="usersPagination.page <= 1"
+              class="px-3 py-1 border rounded disabled:opacity-50"
           >
-            <h3 class="font-bold text-lg mb-2">{{ collection.name }}</h3>
-            <p class="text-sm text-gray-600 mb-2">{{ collection.description || "Brak opisu" }}</p>
-            <div class="text-xs text-gray-500">
-              <p>Kategoria: {{ collection.category?.name || "Nieprzypisane" }}</p>
-              <p>Autor: {{ collection.owner?.username || "Nieznany" }}</p>
-            </div>
-          </div>
+            Poprzednia
+          </button>
+          <span class="px-3 py-1">{{ usersPagination.page }} / {{ usersPagination.pages }}</span>
+          <button 
+              @click="loadUsers(usersPagination.page + 1)"
+              :disabled="usersPagination.page >= usersPagination.pages"
+              class="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Następna
+          </button>
         </div>
       </section>
+
+      <!-- Zarządzanie kolekcjami -->
+      <section class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Wszystkie kolekcje (tylko odczyt)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <router-link
+              v-for="collection in collections"
+              :key="collection._id"
+              :to="{ name: 'SingleCollection', params: { id: collection._id } }"
+              class="block p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer"
+          >
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="font-bold text-lg">{{ collection.name }}</h3>
+              <span 
+                  :class="collection.privacy === 'public' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
+                  class="px-2 py-1 rounded-full text-xs font-medium"
+              >
+                {{ collection.privacy === 'public' ? 'Publiczna' : 'Prywatna' }}
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">{{ collection.description || "Brak opisu" }}</p>
+            <div class="text-xs text-gray-500 space-y-1">
+              <p>Kategoria: {{ collection.category?.name || "Nieprzypisane" }}</p>
+              <p>Właściciel: {{ collection.owner?.username || "Nieznany" }}</p>
+              <p>Przedmioty: {{ collection.itemsCount || 0 }}</p>
+              <p>Wyświetlenia: {{ collection.views || 0 }}</p>
+            </div>
+          </router-link>
+        </div>
+
+        <!-- Paginacja kolekcji -->
+        <div v-if="collectionsPagination.pages > 1" class="flex justify-center gap-2 mt-4">
+          <button 
+              @click="loadCollections(collectionsPagination.page - 1)"
+              :disabled="collectionsPagination.page <= 1"
+              class="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Poprzednia
+          </button>
+          <span class="px-3 py-1">{{ collectionsPagination.page }} / {{ collectionsPagination.pages }}</span>
+          <button 
+              @click="loadCollections(collectionsPagination.page + 1)"
+              :disabled="collectionsPagination.page >= collectionsPagination.pages"
+              class="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Następna
+          </button>
+        </div>
+      </section>
+
+      <!-- Modal potwierdzenia blokady użytkownika -->
+      <div v-if="isBlockConfirmModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Potwierdź blokadę użytkownika</h3>
+          <p class="text-gray-600 mb-2">
+            Czy na pewno chcesz zablokować użytkownika <strong>{{ userToBlock?.username }}</strong>?
+          </p>
+          <p class="text-red-600 text-sm mb-6">
+            ⚠️ Ta operacja jest nieodwracalna. Wszystkie kolekcje i przedmioty użytkownika zostaną trwale usunięte.
+          </p>
+          <div class="flex justify-end gap-3">
+            <button
+                @click="closeBlockConfirmModal"
+                class="btn-gray"
+                :disabled="isProcessing"
+            >
+              Nie
+            </button>
+            <button
+                @click="confirmBlockUser"
+                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                :disabled="isProcessing"
+            >
+              <span v-if="!isProcessing">Tak, zablokuj</span>
+              <Spinner v-else class="w-5 h-5 mx-auto" />
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Modal dodawania kategorii -->
       <div v-if="isAddModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -101,7 +251,6 @@
                       :disabled="isProcessing"
                   ></textarea>
                 </div>
-                <!-- Usunięto opcję ustawiania wymagalności pola "Nazwa przedmiotu" -->
                 <!-- Atrybuty -->
                 <div>
                   <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
@@ -153,7 +302,6 @@
                           @change="updateAddOptions(index, $event.target.value)"
                       />
                     </div>
-                    <!-- Usunięto radio button do wyboru pola wyświetlania -->
                     <!-- Przycisk zmiany kolejności -->
                     <div class="flex gap-2">
                       <button type="button" @click="moveAddAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">
@@ -221,7 +369,6 @@
                       :disabled="isProcessing"
                   ></textarea>
                 </div>
-                <!-- Usunięto opcję ustawiania wymagalności pola "Nazwa przedmiotu" -->
                 <!-- Atrybuty -->
                 <div>
                   <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
@@ -265,7 +412,6 @@
                           @change="updateEditOptions(index, $event.target.value)"
                       />
                     </div>
-                    <!-- Usunięto radio button do wyboru pola wyświetlania -->
                     <!-- Przycisk zmiany kolejności -->
                     <div class="flex gap-2">
                       <button type="button" @click="moveEditAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">↑</button>
@@ -305,7 +451,7 @@ import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { useToast } from 'vue-toastification'
 import CategoryService from '@/services/CategoryService'
-import CollectionService from '@/services/CollectionService'
+import AdminService from '@/services/AdminService'
 import Spinner from '@/components/AppSpinner.vue'
 import { PlusIcon } from '@heroicons/vue/24/outline'
 
@@ -322,8 +468,22 @@ export default {
 
     const categories = ref([])
     const collections = ref([])
+    const users = ref([])
     const loading = ref(true)
     const isProcessing = ref(false)
+    
+    // Paginacja
+    const usersPagination = ref({ page: 1, pages: 1, total: 0 })
+    const collectionsPagination = ref({ page: 1, pages: 1, total: 0 })
+    
+    // Wyszukiwanie użytkowników
+    const userSearch = ref('')
+    let searchTimeout = null
+    
+    // Modal blokady użytkownika
+    const isBlockConfirmModalOpen = ref(false)
+    const userToBlock = ref(null)
+
     const attributeTypes = [
       { value: 'string', label: 'Tekst' },
       { value: 'number', label: 'Liczba' },
@@ -332,7 +492,7 @@ export default {
       { value: 'select', label: 'Lista wyboru' }
     ]
 
-    // Modal dodawania kategorii – usunięto requireItemName i displayAttribute
+    // Modal dodawania kategorii
     const isAddModalOpen = ref(false)
     const newCategoryData = ref({
       name: '',
@@ -340,29 +500,115 @@ export default {
       attributes: []
     })
 
-    // Modal edycji kategorii – usunięto requireItemName i displayAttribute
+    // Modal edycji kategorii
     const isEditModalOpen = ref(false)
     const editedCategory = ref(null)
 
+    const formatDate = (dateString) => {
+      if (!dateString) return 'Nigdy'
+      const date = new Date(dateString)
+      return date.toLocaleString('pl-PL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
     const loadData = async () => {
       try {
-        const [categoriesResponse, collectionsResponse] = await Promise.allSettled([
-          CategoryService.getCategories(),
-          CollectionService.getCollections()
+        const categoriesResponse = await CategoryService.getCategories()
+        categories.value = categoriesResponse.data.categories || []
+        
+        await Promise.all([
+          loadUsers(1),
+          loadCollections(1)
         ])
-
-        categories.value = categoriesResponse.status === 'fulfilled'
-            ? categoriesResponse.value.data.categories
-            : []
-
-        collections.value = collectionsResponse.status === 'fulfilled'
-            ? collectionsResponse.value.data.collections
-            : []
       } catch (error) {
         console.error('Błąd ładowania danych:', error)
         toast.error('Problem z pobraniem danych')
       } finally {
         loading.value = false
+      }
+    }
+
+    const loadUsers = async (page = 1) => {
+      try {
+        const response = await AdminService.getUsers({ 
+          page, 
+          limit: 20,
+          search: userSearch.value || undefined
+        })
+        users.value = response.data.users || []
+        usersPagination.value = response.data.pagination || { page: 1, pages: 1 }
+      } catch (error) {
+        console.error('Błąd ładowania użytkowników:', error)
+        toast.error('Problem z pobraniem listy użytkowników')
+      }
+    }
+
+    const loadCollections = async (page = 1) => {
+      try {
+        const response = await AdminService.getAllCollections({ page, limit: 20 })
+        collections.value = response.data.collections || []
+        collectionsPagination.value = response.data.pagination || { page: 1, pages: 1 }
+      } catch (error) {
+        console.error('Błąd ładowania kolekcji:', error)
+        toast.error('Problem z pobraniem kolekcji')
+      }
+    }
+
+    const debouncedSearchUsers = () => {
+      if (searchTimeout) clearTimeout(searchTimeout)
+      searchTimeout = setTimeout(() => {
+        loadUsers(1)
+      }, 300)
+    }
+
+    // Blokowanie użytkownika
+    const openBlockConfirmModal = (user) => {
+      userToBlock.value = user
+      isBlockConfirmModalOpen.value = true
+    }
+
+    const closeBlockConfirmModal = () => {
+      isBlockConfirmModalOpen.value = false
+      userToBlock.value = null
+    }
+
+    const confirmBlockUser = async () => {
+      if (!userToBlock.value) return
+
+      try {
+        isProcessing.value = true
+        const response = await AdminService.blockUser(userToBlock.value._id)
+        
+        toast.success(`Użytkownik ${userToBlock.value.username} został zablokowany. Usunięto ${response.data.deletedCollections} kolekcji.`)
+        
+        closeBlockConfirmModal()
+        await loadUsers(usersPagination.value.page)
+        await loadCollections(collectionsPagination.value.page)
+      } catch (error) {
+        const message = error.response?.data?.message || 'Błąd blokowania użytkownika'
+        toast.error(message)
+      } finally {
+        isProcessing.value = false
+      }
+    }
+
+    const unblockUser = async (user) => {
+      try {
+        isProcessing.value = true
+        await AdminService.unblockUser(user._id)
+        
+        toast.success(`Użytkownik ${user.username} został odblokowany.`)
+        await loadUsers(usersPagination.value.page)
+      } catch (error) {
+        const message = error.response?.data?.message || 'Błąd odblokowywania użytkownika'
+        toast.error(message)
+      } finally {
+        isProcessing.value = false
       }
     }
 
@@ -383,7 +629,7 @@ export default {
     const addNewAttribute = () => {
       newCategoryData.value.attributes.push({
         name: '',
-        type: 'text',
+        type: 'string',
         required: false,
         options: [],
         optionsInput: ''
@@ -463,7 +709,7 @@ export default {
     const addEditAttribute = () => {
       editedCategory.value.attributes.push({
         name: '',
-        type: 'text',
+        type: 'string',
         required: false,
         options: [],
         optionsInput: ''
@@ -524,23 +770,6 @@ export default {
       }
     }
 
-    const deleteCategory = async (id) => {
-      if (!confirm('Usunięcie kategorii spowoduje również usunięcie powiązanych kolekcji! Kontynuować?')) return
-
-      isProcessing.value = true
-      try {
-        await CategoryService.deleteCategory(id)
-        categories.value = categories.value.filter(c => c._id !== id && c.id !== id)
-        collections.value = collections.value.filter(c => (c.category?._id !== id && c.category?.id !== id))
-        toast.success('Kategoria i powiązane kolekcje zostały usunięte')
-      } catch (error) {
-        const message = error.response?.data?.message || 'Nie można usunąć kategorii w użyciu'
-        toast.error(message)
-      } finally {
-        isProcessing.value = false
-      }
-    }
-
     const handleError = (error, defaultMessage) => {
       const errorMap = {
         CATEGORY_NOT_FOUND: 'Kategoria nie istnieje',
@@ -572,13 +801,27 @@ export default {
     return {
       categories,
       collections,
+      users,
       loading,
       attributeTypes,
       isProcessing,
+      usersPagination,
+      collectionsPagination,
+      userSearch,
+      isBlockConfirmModalOpen,
+      userToBlock,
       isAddModalOpen,
       newCategoryData,
       isEditModalOpen,
       editedCategory,
+      formatDate,
+      loadUsers,
+      loadCollections,
+      debouncedSearchUsers,
+      openBlockConfirmModal,
+      closeBlockConfirmModal,
+      confirmBlockUser,
+      unblockUser,
       openAddModal,
       closeAddModal,
       addNewAttribute,
@@ -587,7 +830,6 @@ export default {
       moveAddAttributeUp,
       moveAddAttributeDown,
       addCategory,
-      deleteCategory,
       openEditModal,
       closeEditModal,
       addEditAttribute,

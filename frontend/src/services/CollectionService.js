@@ -1,22 +1,53 @@
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 export default {
     getCollections(params = {}) {
-        return apiClient.get('/collections', {
+        const {
+            page = 1,
+            limit = 10,
+            category,
+            search
+        } = params;
+
+        return apiClient.get("/collections", {
             params: {
-                page: 1,
-                limit: 10,
-                ...params
+                page,
+                limit,
+                ...(category ? { category } : {}),
+                ...(search ? { search } : {})
             }
         });
     },
+    
+    getPublicCollections(params = {}) {
+        return this.getCollections(params);
+    },
 
-    addCollection(collectionData) {
-        return apiClient.post('/collections', collectionData);
+    getUserCollections(params = {}) {
+        const {
+            page = 1,
+            limit = 10
+        } = params;
+
+        return apiClient.get("/collections/me", {
+            params: { page, limit }
+        });
     },
 
     getCollection(id) {
         return apiClient.get(`/collections/${id}`);
+    },
+
+    getCollectionStats(id) {
+        return apiClient.get(`/collections/${id}/stats`);
+    },
+
+    getCollectionAttributes(id) {
+        return apiClient.get(`/collections/${id}/attributes`);
+    },
+
+    addCollection(collectionData) {
+        return apiClient.post("/collections", collectionData);
     },
 
     updateCollection(id, updates) {
@@ -27,27 +58,50 @@ export default {
         return apiClient.delete(`/collections/${id}`);
     },
 
-    getUserCollections(params) {
-        return apiClient.get('/collections/me', {params: {page: params.page, limit: params.limit}});
+    addAllowedUserByUsername(collectionId, username) {
+        return apiClient.post(`/collections/${collectionId}/allowed-users`, {
+            username
+        });
     },
 
-    addAllowedUserByUsername(collectionId, username) {
-        return apiClient.post(`/collections/${collectionId}/allowed-users`, { username });
+    getAllowedUsers(collectionId) {
+        return apiClient.get(`/collections/${collectionId}/allowed-users`);
+    },
+
+    removeAllowedUser(collectionId, userId) {
+        return apiClient.delete(`/collections/${collectionId}/allowed-users/${userId}`);
     },
 
     getPopularCollections() {
-        return apiClient.get('/collections/special/popular');
+        return apiClient.get("/collections/special/popular");
     },
 
-    getPublicCollections() {
-        return apiClient.get('/collections');
+    searchCollections(query, extraParams = {}) {
+        return this.getCollections({
+            ...extraParams,
+            search: query
+        });
     },
 
-    searchCollections(query) {
-        return apiClient.get('/collections/search', { params: { q: query } });
+    incrementViews(id) {
+        return apiClient.post(`/collections/${id}/view`);
     },
 
-    getCollectionStats(id) {
-        return apiClient.get(`/collections/${id}/stats`);
+    likeCollection(id) {
+        return apiClient.post(`/collections/${id}/like`);
+    },
+
+    getComments(id) {
+        return apiClient.get(`/collections/${id}/comments`);
+    },
+
+    addComment(id, text) {
+        return apiClient.post(`/collections/${id}/comments`, { text });
+    },
+
+    deleteComment(collectionId, commentId) {
+        return apiClient.delete(
+            `/collections/${collectionId}/comments/${commentId}`
+        );
     }
 };
