@@ -1,25 +1,20 @@
 <template>
   <div class="container mx-auto p-4">
-    <!-- Nagłówek -->
     <header class="mb-8">
       <h1 class="text-4xl font-bold text-gray-800">Moje Kolekcje</h1>
       <p class="text-gray-600 mt-2">Zarządzaj swoimi kolekcjami</p>
     </header>
 
-    <!-- Ładowanie -->
     <div v-if="loading" class="text-center py-8">
       <Spinner class="w-12 h-12 mx-auto text-blue-500" />
     </div>
 
-    <!-- Główna zawartość -->
     <div v-else>
-      <!-- Statystyki i przyciski akcji -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div class="stats-container">
           <span class="stat-item">
             Łącznie kolekcji: <strong>{{ pagination.total }}</strong>
           </span>
-          <!-- Informacja o stronach wyświetlana tylko, gdy jest więcej niż jedna strona -->
           <span class="stat-item" v-if="pagination.pages > 1">
             Strona: <strong>{{ pagination.page }}/{{ pagination.pages }}</strong>
           </span>
@@ -34,19 +29,16 @@
         </button>
       </div>
 
-      <!-- Brak kolekcji -->
       <div v-if="collections.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
         <p class="text-gray-500">Nie masz jeszcze żadnych kolekcji</p>
       </div>
 
-      <!-- Lista kolekcji -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
             v-for="collection in collections"
             :key="collection._id"
             class="group relative p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
         >
-          <!-- Akcje dla właściciela -->
           <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition z-20">
             <button
                 @click.stop="openEditModal(collection)"
@@ -64,9 +56,7 @@
             </button>
           </div>
 
-          <!-- Klikalny obszar kolekcji -->
           <router-link :to="`/collections/${collection._id}`" class="block">
-            <!-- Okładka -->
             <div class="mb-4 relative h-48 overflow-hidden rounded-lg bg-gray-100">
               <img
                   :src="collection.coverImage ? getImageUrl(collection.coverImage) : '/placeholder-collection.svg'"
@@ -240,7 +230,6 @@
         <form @submit.prevent="submitEdit" class="flex-1 flex flex-col overflow-hidden">
           <div class="flex-1 min-h-0 overflow-y-auto p-6">
             <div class="space-y-4">
-              <!-- Formularz edycji (taki sam jak dodawanie) -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa *</label>
                 <input
@@ -411,7 +400,6 @@ export default {
     const deleteConfirmation = ref('')
 
     const collections = ref([])
-    // Ustawiamy domyślnie limit na 9 kolekcji na stronę
     const pagination = ref({
       page: 1,
       limit: 9,
@@ -558,7 +546,6 @@ export default {
           hideDescription: editingCollection.value.hideDescription
         }
 
-        // Dodaj coverImage tylko jeśli jest ustawiony (URL z ImageUploader)
         if (editingCollection.value.coverImage) {
           updates.coverImage = editingCollection.value.coverImage
         }
@@ -607,11 +594,9 @@ export default {
         isProcessing.value = true
         await CollectionService.deleteCollection(deletingCollection.value._id)
 
-        // Opcjonalnie można zaktualizować stan kolekcji przed przeładowaniem
         collections.value = collections.value.filter(c => c._id !== deletingCollection.value._id)
         toast.success('Kolekcja została usunięta')
         closeDeleteModal()
-        // Przeładowanie strony po usunięciu kolekcji
         window.location.reload()
       } catch (error) {
         handleError(error, 'Błąd usuwania kolekcji')
