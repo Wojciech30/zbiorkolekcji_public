@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Routes autoryzacji
+ * @description Endpointy dla rejestracji, logowania, weryfikacji email,
+ * resetowania hasła, zarządzania profilem i tokenami JWT.
+ * 
+ * @module routes/auth
+ */
+
 import express from "express";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -12,66 +20,68 @@ if (!JWT_SECRET) throw new Error("Brak konfiguracji JWT_SECRET");
 const FRONTEND_BASE_URL =
     process.env.FRONTEND_BASE_URL || "http://localhost:8080";
 
+/**
+ * Stałe komunikatów błędów
+ * Używane do spójnych odpowiedzi API
+ */
 const ERROR_MESSAGES = {
-    REGISTER_MISSING_FIELDS:
-        "Wymagane pola: nazwa użytkownika, hasło i email",
+    // Rejestracja
+    REGISTER_MISSING_FIELDS: "Wymagane pola: nazwa użytkownika, hasło i email",
     REGISTER_INVALID_EMAIL: "Nieprawidłowy format email",
     REGISTER_USER_EXISTS: "Nazwa użytkownika lub email jest już zajęty",
-    REGISTER_PASSWORD_TOO_WEAK:
-        "Hasło musi mieć co najmniej 6 znaków",
-
-    LOGIN_MISSING_FIELDS:
-        "Wymagane pola: login (email lub nazwa użytkownika) oraz hasło",
+    REGISTER_PASSWORD_TOO_WEAK: "Hasło musi mieć co najmniej 6 znaków",
+    // Logowanie
+    LOGIN_MISSING_FIELDS: "Wymagane pola: login (email lub nazwa użytkownika) oraz hasło",
     LOGIN_FAILED: "Nieprawidłowe dane logowania",
-    EMAIL_NOT_VERIFIED:
-        "Adres e-mail nie został jeszcze potwierdzony. Sprawdź swoją skrzynkę pocztową.",
-
+    EMAIL_NOT_VERIFIED: "Adres e-mail nie został jeszcze potwierdzony. Sprawdź swoją skrzynkę pocztową.",
+    // Tokeny
     TOKEN_GENERATION_ERROR: "Błąd generowania tokenów",
     SERVER_ERROR: "Błąd serwera",
-
     REFRESH_TOKEN_MISSING: "Brak tokena odświeżającego",
     REFRESH_TOKEN_INVALID: "Nieprawidłowy token odświeżający",
     REFRESH_TOKEN_EXPIRED: "Token odświeżający wygasł",
-
+    // Profil
     PROFILE_NO_FIELDS: "Brak danych do aktualizacji",
     PROFILE_INVALID_EMAIL: "Nieprawidłowy format email",
     PROFILE_CONFLICT: "Nazwa użytkownika lub email jest już zajęty",
-
-    CHANGE_PASSWORD_MISSING_FIELDS:
-        "Wymagane pola: obecne hasło i nowe hasło",
-    CHANGE_PASSWORD_INVALID_CURRENT:
-        "Obecne hasło jest nieprawidłowe",
-    CHANGE_PASSWORD_TOO_WEAK:
-        "Nowe hasło musi mieć co najmniej 6 znaków",
-
+    // Zmiana hasła
+    CHANGE_PASSWORD_MISSING_FIELDS: "Wymagane pola: obecne hasło i nowe hasło",
+    CHANGE_PASSWORD_INVALID_CURRENT: "Obecne hasło jest nieprawidłowe",
+    CHANGE_PASSWORD_TOO_WEAK: "Nowe hasło musi mieć co najmniej 6 znaków",
+    // Weryfikacja email
     EMAIL_VERIFICATION_MISSING_TOKEN: "Brak tokena weryfikacyjnego",
-    EMAIL_VERIFICATION_INVALID:
-        "Nieprawidłowy token weryfikacyjny",
-    EMAIL_VERIFICATION_EXPIRED:
-        "Token weryfikacyjny wygasł. Poproś o nowy link.",
-
+    EMAIL_VERIFICATION_INVALID: "Nieprawidłowy token weryfikacyjny",
+    EMAIL_VERIFICATION_EXPIRED: "Token weryfikacyjny wygasł. Poproś o nowy link.",
+    // Reset hasła
     FORGOT_PASSWORD_MISSING_EMAIL: "Adres e-mail jest wymagany.",
-    PASSWORD_RESET_MISSING_TOKEN:
-        "Brak tokena do resetu hasła.",
-    PASSWORD_RESET_MISSING_PASSWORD:
-        "Nowe hasło jest wymagane.",
-    PASSWORD_RESET_TOO_WEAK:
-        "Nowe hasło musi mieć co najmniej 6 znaków.",
-    PASSWORD_RESET_INVALID:
-        "Nieprawidłowy lub wygasły token resetu hasła."
+    PASSWORD_RESET_MISSING_TOKEN: "Brak tokena do resetu hasła.",
+    PASSWORD_RESET_MISSING_PASSWORD: "Nowe hasło jest wymagane.",
+    PASSWORD_RESET_TOO_WEAK: "Nowe hasło musi mieć co najmniej 6 znaków.",
+    PASSWORD_RESET_INVALID: "Nieprawidłowy lub wygasły token resetu hasła."
 };
 
+/**
+ * Walidacja formatu email
+ * @param {string} email
+ * @returns {boolean}
+ */
 const isValidEmail = email =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-// Generowanie access + refresh tokenów
+/**
+ * Generuje parę tokenów JWT (access + refresh)
+ * @param {Object} user - Obiekt użytkownika z _id i role
+ * @returns {{accessToken: string, refreshToken: string}}
+ */
 const generateTokens = user => {
+    // Access token - krótkotrwały (15 min)
     const accessToken = jwt.sign(
         { id: user._id, role: user.role },
         JWT_SECRET,
         { expiresIn: "15m" }
     );
 
+    // Refresh token - długotrwały (7 dni)
     const refreshToken = jwt.sign(
         { id: user._id },
         JWT_SECRET,
@@ -82,6 +92,14 @@ const generateTokens = user => {
 };
 
 // ======================= LOGOWANIE =======================
+/**
+ * @route POST /api/v1/auth/login
+ * @description Logowanie użytkownika (email lub username)
+ * @access Public
+ * @param {string} req.body.identifier - Email lub nazwa użytkownika
+ * @param {string} req.body.password - Hasło
+ * @returns {Object} accessToken, refreshToken, user
+ */
 router.post("/login", async (req, res) => {
     try {
         const { identifier, password } = req.body;
@@ -93,6 +111,7 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        // Szukaj po email lub username
         const query = isValidEmail(identifier)
             ? { email: identifier }
             : { username: identifier };
@@ -105,6 +124,7 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        // Sprawdź czy email został zweryfikowany
         if (!user.isEmailVerified) {
             return res.status(403).json({
                 code: "EMAIL_NOT_VERIFIED",
@@ -112,6 +132,7 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        // Generuj tokeny
         let accessToken, refreshToken;
         try {
             ({ accessToken, refreshToken } = generateTokens(user));
@@ -122,6 +143,7 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        // Aktualizuj datę ostatniego logowania
         await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
         res.json({
@@ -149,10 +171,20 @@ router.post("/login", async (req, res) => {
 });
 
 // ======================= REJESTRACJA =======================
+/**
+ * @route POST /api/v1/auth/register
+ * @description Rejestracja nowego użytkownika
+ * @access Public
+ * @param {string} req.body.username - Nazwa użytkownika (3-30 znaków)
+ * @param {string} req.body.email - Adres email
+ * @param {string} req.body.password - Hasło (min 6 znaków)
+ * @returns {Object} user, message, verificationUrl (dev only)
+ */
 router.post("/register", async (req, res) => {
     try {
         const { username, password, email } = req.body;
 
+        // Walidacja wymaganych pól
         if (!username || !password || !email) {
             return res.status(400).json({
                 code: "REGISTER_MISSING_FIELDS",
@@ -174,6 +206,7 @@ router.post("/register", async (req, res) => {
             });
         }
 
+        // Sprawdź czy użytkownik istnieje
         const existingUser = await User.findOne({
             $or: [{ username }, { email }]
         });
@@ -185,9 +218,9 @@ router.post("/register", async (req, res) => {
             });
         }
 
+        // Utwórz użytkownika i wygeneruj token weryfikacyjny
         const newUser = new User({ username, password, email });
-        const emailVerificationToken =
-            newUser.generateEmailVerificationToken();
+        const emailVerificationToken = newUser.generateEmailVerificationToken();
         await newUser.save();
 
         const verificationUrl = `${FRONTEND_BASE_URL}/verify-email?token=${emailVerificationToken}`;
@@ -208,12 +241,8 @@ router.post("/register", async (req, res) => {
                 role: newUser.role,
                 isEmailVerified: newUser.isEmailVerified
             },
-            message:
-                "Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail, aby potwierdzić adres.",
-            verificationUrl:
-                process.env.NODE_ENV !== "production"
-                    ? verificationUrl
-                    : undefined
+            message: "Konto zostało utworzone. Sprawdź swoją skrzynkę e-mail, aby potwierdzić adres.",
+            verificationUrl: process.env.NODE_ENV !== "production" ? verificationUrl : undefined
         });
     } catch (error) {
         console.error("Register error:", error);
@@ -233,6 +262,12 @@ router.post("/register", async (req, res) => {
 });
 
 // ======================= POTWIERDZENIE EMAILA =======================
+/**
+ * @route POST /api/v1/auth/verify-email
+ * @description Weryfikacja adresu email tokenem z linku
+ * @access Public
+ * @param {string} req.body.token - Token weryfikacyjny
+ */
 router.post("/verify-email", async (req, res) => {
     try {
         const { token } = req.body;
@@ -244,6 +279,7 @@ router.post("/verify-email", async (req, res) => {
             });
         }
 
+        // Hashuj token i znajdź użytkownika
         const hashedToken = crypto
             .createHash("sha256")
             .update(token)
@@ -261,6 +297,7 @@ router.post("/verify-email", async (req, res) => {
             });
         }
 
+        // Oznacz email jako zweryfikowany
         user.isEmailVerified = true;
         user.emailVerificationToken = undefined;
         user.emailVerificationExpires = undefined;
@@ -281,6 +318,12 @@ router.post("/verify-email", async (req, res) => {
 });
 
 // ======================= PONOWNE WYSŁANIE LINKU WERYFIKACYJNEGO =======================
+/**
+ * @route POST /api/v1/auth/resend-verification
+ * @description Ponowne wysłanie linku weryfikacyjnego (rate limit: 5 min)
+ * @access Public
+ * @param {string} req.body.email - Adres email
+ */
 router.post("/resend-verification", async (req, res) => {
     try {
         const { email } = req.body;
@@ -292,10 +335,9 @@ router.post("/resend-verification", async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email }).select(
-            "+emailVerificationLastSent"
-        );
+        const user = await User.findOne({ email }).select("+emailVerificationLastSent");
 
+        // Bezpieczna odpowiedź - nie ujawniaj czy konto istnieje
         if (!user) {
             return res.json({
                 code: "VERIFICATION_LINK_SENT",
@@ -310,6 +352,7 @@ router.post("/resend-verification", async (req, res) => {
             });
         }
 
+        // Rate limiting - max raz na 5 minut
         const now = Date.now();
         if (user.emailVerificationLastSent) {
             const diff = now - new Date(user.emailVerificationLastSent).getTime();
@@ -325,13 +368,14 @@ router.post("/resend-verification", async (req, res) => {
             }
         }
 
+        // Generuj nowy token
         const newToken = user.generateEmailVerificationToken();
         user.emailVerificationLastSent = new Date();
         await user.save({ validateBeforeSave: false });
 
         const verifyUrl = `${FRONTEND_BASE_URL}/verify-email?token=${newToken}`;
 
-        // Wyślij email weryfikacyjny
+        // Wyślij email
         try {
             await sendVerificationEmail(user.email, user.username, newToken);
         } catch (emailError) {
@@ -355,6 +399,12 @@ router.post("/resend-verification", async (req, res) => {
 
 
 // ======================= FORGOT PASSWORD =======================
+/**
+ * @route POST /api/v1/auth/forgot-password
+ * @description Wysłanie linku do resetu hasła
+ * @access Public
+ * @param {string} req.body.email - Adres email
+ */
 router.post("/forgot-password", async (req, res) => {
     try {
         const { email } = req.body;
@@ -367,20 +417,22 @@ router.post("/forgot-password", async (req, res) => {
         }
 
         const user = await User.findOne({ email });
+        
+        // Bezpieczna odpowiedź - nie ujawniaj czy konto istnieje
         if (!user) {
             return res.json({
                 code: "FORGOT_PASSWORD_EMAIL_SENT",
-                message:
-                    "Jeśli konto z tym adresem istnieje, wysłaliśmy instrukcje resetu hasła."
+                message: "Jeśli konto z tym adresem istnieje, wysłaliśmy instrukcje resetu hasła."
             });
         }
 
+        // Generuj token resetu (ważny 1h)
         const resetToken = user.generatePasswordResetToken();
         await user.save({ validateBeforeSave: false });
 
         const resetUrl = `${FRONTEND_BASE_URL}/reset-password?token=${resetToken}`;
 
-        // Wyślij email z linkiem do resetu hasła
+        // Wyślij email z linkiem do resetu
         try {
             await sendPasswordResetEmail(user.email, user.username, resetToken);
         } catch (emailError) {
@@ -389,10 +441,8 @@ router.post("/forgot-password", async (req, res) => {
 
         res.json({
             code: "FORGOT_PASSWORD_EMAIL_SENT",
-            message:
-                "Jeśli konto z tym adresem istnieje, wysłaliśmy instrukcje resetu hasła.",
-            resetUrl:
-                process.env.NODE_ENV !== "production" ? resetUrl : undefined
+            message: "Jeśli konto z tym adresem istnieje, wysłaliśmy instrukcje resetu hasła.",
+            resetUrl: process.env.NODE_ENV !== "production" ? resetUrl : undefined
         });
     } catch (error) {
         console.error("Forgot password error:", error);
@@ -404,6 +454,13 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 // ======================= RESET PASSWORD =======================
+/**
+ * @route POST /api/v1/auth/reset-password
+ * @description Reset hasła z tokenem z emaila
+ * @access Public
+ * @param {string} req.body.token - Token resetu
+ * @param {string} req.body.newPassword - Nowe hasło (min 6 znaków)
+ */
 router.post("/reset-password", async (req, res) => {
     try {
         const { token, newPassword } = req.body;
@@ -429,6 +486,7 @@ router.post("/reset-password", async (req, res) => {
             });
         }
 
+        // Hashuj token i znajdź użytkownika
         const hashedToken = crypto
             .createHash("sha256")
             .update(token)
@@ -446,6 +504,7 @@ router.post("/reset-password", async (req, res) => {
             });
         }
 
+        // Ustaw nowe hasło i wyczyść token
         user.password = newPassword;
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
@@ -466,6 +525,11 @@ router.post("/reset-password", async (req, res) => {
 });
 
 // ======================= PROFIL (GET) =======================
+/**
+ * @route GET /api/v1/auth/profile
+ * @description Pobierz profil zalogowanego użytkownika
+ * @access Private
+ */
 router.get("/profile", authenticateToken, (req, res) => {
     const safeUserData = {
         id: req.user._id,
@@ -480,6 +544,13 @@ router.get("/profile", authenticateToken, (req, res) => {
 });
 
 // ======================= ZMIANA HASŁA (ZALOGOWANY) =======================
+/**
+ * @route POST /api/v1/auth/change-password
+ * @description Zmiana hasła zalogowanego użytkownika
+ * @access Private
+ * @param {string} req.body.currentPassword - Obecne hasło
+ * @param {string} req.body.newPassword - Nowe hasło (min 6 znaków)
+ */
 router.post("/change-password", authenticateToken, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
@@ -506,6 +577,7 @@ router.post("/change-password", authenticateToken, async (req, res) => {
             });
         }
 
+        // Sprawdź obecne hasło
         const isMatch = await user.comparePassword(currentPassword);
         if (!isMatch) {
             return res.status(400).json({
@@ -531,6 +603,12 @@ router.post("/change-password", authenticateToken, async (req, res) => {
 });
 
 // ======================= AKTUALIZACJA AVATARA =======================
+/**
+ * @route PUT /api/v1/auth/update-avatar
+ * @description Aktualizacja avatara użytkownika
+ * @access Private
+ * @param {string} req.body.avatar - URL avatara
+ */
 router.put("/update-avatar", authenticateToken, async (req, res) => {
     try {
         const { avatar } = req.body;
@@ -568,6 +646,12 @@ router.put("/update-avatar", authenticateToken, async (req, res) => {
 });
 
 // ======================= AKTUALIZACJA WIDOCZNOŚCI PROFILU =======================
+/**
+ * @route PUT /api/v1/auth/update-profile-visibility
+ * @description Zmiana widoczności profilu (publiczny/prywatny)
+ * @access Private
+ * @param {boolean} req.body.isProfilePublic - Czy profil ma być publiczny
+ */
 router.put("/update-profile-visibility", authenticateToken, async (req, res) => {
     try {
         const { isProfilePublic } = req.body;
@@ -607,6 +691,13 @@ router.put("/update-profile-visibility", authenticateToken, async (req, res) => 
 });
 
 // ======================= REFRESH TOKEN =======================
+/**
+ * @route POST /api/v1/auth/refresh
+ * @description Odświeżenie tokena JWT
+ * @access Public
+ * @param {string} req.body.refreshToken - Token odświeżający
+ * @returns {Object} accessToken, refreshToken
+ */
 router.post("/refresh", async (req, res) => {
     try {
         const { refreshToken } = req.body;
@@ -618,6 +709,7 @@ router.post("/refresh", async (req, res) => {
             });
         }
 
+        // Weryfikuj token
         let payload;
         try {
             payload = jwt.verify(refreshToken, JWT_SECRET);
@@ -642,8 +734,8 @@ router.post("/refresh", async (req, res) => {
             });
         }
 
-        const { accessToken, refreshToken: newRefreshToken } =
-            generateTokens(user);
+        // Generuj nową parę tokenów
+        const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
 
         res.json({
             accessToken,
@@ -659,6 +751,12 @@ router.post("/refresh", async (req, res) => {
 });
 
 // ======================= LOGOUT =======================
+/**
+ * @route POST /api/v1/auth/logout
+ * @description Wylogowanie użytkownika (unieważnienie refresh tokena)
+ * @access Public
+ * @param {string} req.body.refreshToken - Token do unieważnienia
+ */
 router.post("/logout", (req, res) => {
     const { refreshToken } = req.body;
 
@@ -669,6 +767,8 @@ router.post("/logout", (req, res) => {
         });
     }
 
+    // Token jest unieważniany po stronie klienta
+    // Server nie przechowuje listy tokenów (stateless JWT)
     return res.json({
         code: "LOGOUT_SUCCESS",
         message: "Wylogowano pomyślnie"
@@ -676,6 +776,17 @@ router.post("/logout", (req, res) => {
 });
 
 // ======================= HARD DELETE ACCOUNT =======================
+/**
+ * @route DELETE /api/v1/auth/delete-account
+ * @description Trwałe usunięcie konta wraz ze wszystkimi danymi
+ * @access Private
+ * @param {string} req.body.password - Hasło do potwierdzenia
+ * 
+ * Cascade delete:
+ * 1. Usuwa wszystkie przedmioty użytkownika
+ * 2. Usuwa wszystkie kolekcje użytkownika
+ * 3. Usuwa konto użytkownika
+ */
 router.delete("/delete-account", authenticateToken, async (req, res) => {
     try {
         const { password } = req.body;
@@ -695,6 +806,7 @@ router.delete("/delete-account", authenticateToken, async (req, res) => {
             });
         }
 
+        // Weryfikuj hasło
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
             return res.status(400).json({
@@ -703,19 +815,19 @@ router.delete("/delete-account", authenticateToken, async (req, res) => {
             });
         }
 
-        // Import models for cascade delete
+        // Import modeli do cascade delete
         const Collection = (await import("../models/Collection.js")).default;
         const Item = (await import("../models/Item.js")).default;
 
-        // Delete all user's items
+        // Usuń wszystkie przedmioty użytkownika
         const userCollections = await Collection.find({ owner: user._id }).select("_id");
         const collectionIds = userCollections.map(c => c._id);
         await Item.deleteMany({ parentCollection: { $in: collectionIds } });
 
-        // Delete all user's collections
+        // Usuń wszystkie kolekcje użytkownika
         await Collection.deleteMany({ owner: user._id });
 
-        // Delete the user
+        // Usuń konto
         await User.findByIdAndDelete(user._id);
 
         res.json({

@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Routes publicznych profili użytkowników
+ * @description Endpoint do pobierania publicznego profilu użytkownika
+ * wraz z jego publicznymi kolekcjami i statystykami.
+ * 
+ * @module routes/users
+ * 
+ * @routes
+ * GET /:id - Pobierz publiczny profil użytkownika (z kolekcjami i statystykami)
+ * 
+ * @access Public - ale respektuje ustawienie isProfilePublic użytkownika
+ */
+
 import express from "express";
 import mongoose from "mongoose";
 import User from "../models/User.js";

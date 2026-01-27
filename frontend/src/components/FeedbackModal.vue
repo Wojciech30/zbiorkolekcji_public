@@ -1,3 +1,17 @@
+<!--
+  @component FeedbackModal
+  @description Modal do zgłaszania problemów/feedbacku.
+  Używa BaseModal i ImageUploader do opcjonalnego screenshota.
+  
+  @props
+  - show: Boolean - czy modal jest widoczny
+  
+  @emits
+  - close - po zamknięciu modala
+  
+  @example
+  <FeedbackModal :show="showFeedback" @close="showFeedback = false" />
+-->
 <template>
   <BaseModal 
     :show="show" 
@@ -59,6 +73,10 @@
 </template>
 
 <script>
+/**
+ * @module FeedbackModal
+ * @description Komponent modala feedbacku z formularzem zgłoszenia problemu
+ */
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import BaseModal from '@/components/BaseModal.vue'
@@ -110,7 +128,6 @@ export default {
       try {
         isSubmitting.value = true
         
-        // Send as JSON with screenshot URL
         await SupportService.reportProblem({
           subject: subject.value.trim(),
           message: message.value.trim(),

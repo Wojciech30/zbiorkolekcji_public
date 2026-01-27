@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Utility do obsługi błędów API
+ * @description Normalizuje błędy Axios do czytelnych komunikatów.
+ * Mapuje kody błędów backendu na polskie komunikaty.
+ * 
+ * @module utils/errorHandler
+ * 
+ * @exports
+ * - normalizeApiError(error, fallback) - zwraca znormalizowany obiekt błędu
+ * - getUserFriendlyErrorMessage(error, fallback) - zwraca string komunikatu
+ */
+
 const codeMessageMap = {
     LOGIN_MISSING_FIELDS: "Podaj login oraz hasło.",
     INVALID_CREDENTIALS: "Nieprawidłowy login lub hasło.",

@@ -1,7 +1,20 @@
+/**
+ * @fileoverview Model kolekcji
+ * @description Schema Mongoose dla kolekcji przedmiotów z obsługą komentarzy,
+ * polubień, prywatności i obrazków okładek.
+ */
+
 import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
+/**
+ * Sub-schema komentarza do kolekcji
+ * @typedef {Object} CommentSubSchema
+ * @property {ObjectId} user - Referencja do użytkownika (autor komentarza)
+ * @property {string} text - Treść komentarza (max 1000 znaków)
+ * @property {Date} createdAt - Data utworzenia
+ */
 const commentSubSchema = new Schema(
     {
         user: {
@@ -22,11 +35,25 @@ const commentSubSchema = new Schema(
     },
     {
         _id: true,
-        _id: true,
         id: false
     }
 );
 
+/**
+ * Schema kolekcji
+ * @typedef {Object} CollectionSchema
+ * @property {string} name - Nazwa kolekcji (2-100 znaków)
+ * @property {string} description - Opis kolekcji (max 500 znaków)
+ * @property {ObjectId} owner - Właściciel kolekcji (referencja do User)
+ * @property {ObjectId} category - Kategoria kolekcji (nie można zmienić po utworzeniu)
+ * @property {string} privacy - Prywatność: 'public' lub 'private'
+ * @property {ObjectId[]} allowedUsers - Użytkownicy z dostępem do prywatnej kolekcji
+ * @property {number} views - Licznik wyświetleń
+ * @property {ObjectId[]} likes - Lista użytkowników, którzy polubili
+ * @property {CommentSubSchema[]} comments - Komentarze do kolekcji
+ * @property {string} coverImage - URL obrazka okładki
+ * @property {boolean} hideDescription - Czy ukryć opis na stronie kolekcji
+ */
 const collectionSchema = new Schema(
     {
         name: {
@@ -52,13 +79,14 @@ const collectionSchema = new Schema(
             ref: "Category",
             required: true,
             index: true,
-            immutable: true
+            immutable: true // Nie można zmienić kategorii po utworzeniu
         },
         privacy: {
             type: String,
             enum: ["public", "private"],
             default: "public"
         },
+        // Użytkownicy którzy mają dostęp do prywatnej kolekcji
         allowedUsers: [
             {
                 type: Schema.Types.ObjectId,
@@ -70,6 +98,7 @@ const collectionSchema = new Schema(
             default: 0,
             min: 0
         },
+        // Lista użytkowników którzy polubili kolekcję
         likes: [
             {
                 type: Schema.Types.ObjectId,
@@ -98,18 +127,31 @@ const collectionSchema = new Schema(
     }
 );
 
-collectionSchema.index({ name: "text", description: "text" });
-collectionSchema.index({ privacy: 1, owner: 1 });
-collectionSchema.index({ privacy: 1, views: -1 });
+// Indeksy dla wyszukiwania i sortowania
+collectionSchema.index({ name: "text", description: "text" }); // Pełnotekstowe wyszukiwanie
+collectionSchema.index({ privacy: 1, owner: 1 }); // Kolekcje użytkownika
+collectionSchema.index({ privacy: 1, views: -1 }); // Popularne publiczne kolekcje
 
+/**
+ * Wirtualne pole - liczba polubień
+ * @returns {number}
+ */
 collectionSchema.virtual("likesCount").get(function () {
     return Array.isArray(this.likes) ? this.likes.length : 0;
 });
 
+/**
+ * Wirtualne pole - liczba komentarzy
+ * @returns {number}
+ */
 collectionSchema.virtual("commentsCount").get(function () {
     return Array.isArray(this.comments) ? this.comments.length : 0;
 });
 
+/**
+ * Pre-delete hook - usuwa wszystkie przedmioty należące do kolekcji
+ * Uruchamia się przy collection.deleteOne()
+ */
 collectionSchema.pre("deleteOne", { document: true, query: false }, async function () {
     await mongoose.model("Item").deleteMany({ parentCollection: this._id });
 });

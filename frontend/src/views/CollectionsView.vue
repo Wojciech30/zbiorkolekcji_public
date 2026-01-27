@@ -1,3 +1,8 @@
+<!--
+  @view CollectionsView
+  @description Lista publicznych kolekcji /collections.
+  Filtry: według kategorii. Paginacja. Karta tworzenia nowej kolekcji.
+-->
 <template>
   <div class="container mx-auto p-4">
     <header class="mb-8">
@@ -368,7 +373,6 @@ export default {
     const isDeleteModalOpen = ref(false)
     const deletingCollection = ref(null)
     const deleteConfirmation = ref('')
-
     const collections = ref([])
     const pagination = ref({
       page: 1,
@@ -377,6 +381,7 @@ export default {
       pages: 1
     })
 
+    // Formularz nowej kolekcji
     const newCollection = ref({
       name: '',
       description: '',
@@ -385,6 +390,7 @@ export default {
       coverImage: null
     })
 
+    // Formularz edycji kolekcji
     const isEditModalOpen = ref(false)
     const editingCollection = ref({
       _id: '',
@@ -396,6 +402,7 @@ export default {
       hideDescription: false
     })
 
+    // Ładowanie listy kolekcji użytkownika
     const loadCollections = async () => {
       try {
         loading.value = true
@@ -439,12 +446,10 @@ export default {
       }
     }
 
-
+    // Dodawanie kolekcji
     const submitCollection = async () => {
       try {
         isProcessing.value = true
-
-        // ImageUploader returns URL string after upload, so we send JSON instead of FormData
         const payload = {
           name: newCollection.value.name,
           description: newCollection.value.description,
@@ -638,13 +643,7 @@ export default {
   @apply px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-}
+/* line-clamp-2 now in global tailwind.css */
 
 .btn-danger {
   @apply bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;

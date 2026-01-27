@@ -1,3 +1,33 @@
+/**
+ * @fileoverview Routes kolekcji
+ * @description Endpointy CRUD dla kolekcji, zarządzanie dostępem,
+ * statystyki, polubienia i komentarze.
+ * 
+ * @module routes/collections
+ * 
+ * @routes
+ * GET    /                     - Lista publicznych kolekcji (paginacja, filtry)
+ * GET    /:id/attributes       - Atrybuty kategorii kolekcji
+ * GET    /me                   - Kolekcje zalogowanego użytkownika
+ * GET    /me/liked             - Polubione kolekcje użytkownika
+ * GET    /:id                  - Szczegóły kolekcji (z weryfikacją dostępu)
+ * POST   /                     - Utwórz nową kolekcję
+ * PATCH  /:id                  - Aktualizuj kolekcję
+ * DELETE /:id                  - Usuń kolekcję (cascade: usuwa przedmioty)
+ * GET    /special/stats        - Globalne statystyki
+ * GET    /special/popular      - Najpopularniejsze kolekcje
+ * GET    /:id/stats            - Statystyki konkretnej kolekcji
+ * POST   /:id/view             - Inkrementuj wyświetlenia
+ * GET    /:id/allowed-users    - Lista użytkowników z dostępem
+ * PUT    /:id/allowed-users    - Ustaw listę dozwolonych użytkowników
+ * DELETE /:id/allowed-users/:userId - Usuń użytkownika z listy
+ * POST   /:id/like             - Polub kolekcję
+ * DELETE /:id/like             - Cofnij polubienie
+ * POST   /:id/comments         - Dodaj komentarz
+ * DELETE /:id/comments/:commentId - Usuń komentarz
+ * GET    /users/:userId        - Publiczne kolekcje użytkownika
+ */
+
 import express from "express";
 import Collection from "../models/Collection.js";
 import Item from "../models/Item.js";
@@ -12,6 +42,13 @@ import User from "../models/User.js";
 import validateObjectId from "../middleware/validateObjectId.js";
 
 const router = express.Router();
+
+/**
+ * Obsługa błędów z walidacją Mongoose
+ * @param {Object} res - Response object
+ * @param {Error} error - Błąd
+ * @param {string} defaultMessage - Domyślny komunikat
+ */
 
 const handleError = (res, error, defaultMessage) => {
     console.error(error);

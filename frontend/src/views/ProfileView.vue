@@ -1,10 +1,16 @@
+<!--
+  @view ProfileView
+  @description Profil zalogowanego użytkownika.
+  Zmiany: avatar, hasło, widoczność profilu, usuwanie konta.
+  Przeglądanie: polubione kolekcje.
+-->
 <template>
   <div class="container mx-auto p-4">
     <!-- Header z danymi użytkownika -->
     <header class="mb-8">
       <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center gap-6">
-          <!-- Avatar z możliwością zmiany -->
+          <!-- Awatar z możliwością zmiany -->
           <div class="relative group">
             <div 
               v-if="user?.avatar"
@@ -19,7 +25,7 @@
               {{ userInitials }}
             </div>
             
-            <!-- Przycisk zmiany avatara -->
+            <!-- Przycisk zmiany awatara -->
             <button
               @click="showAvatarModal = true"
               class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
@@ -45,7 +51,7 @@
             </span>
           </div>
           
-          <!-- Settings icon -->
+          <!-- Ustawienia -->
           <button
             @click="showSettingsModal = true"
             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -57,7 +63,7 @@
       </div>
     </header>
 
-    <!-- Statystyki -->
+    <!-- Statystyki w panelach -->
     <section class="mb-8">
       <h2 class="text-2xl font-semibold mb-4">Statystyki</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -96,7 +102,7 @@
           :showOwner="true"
         />
       </div>
-      <!-- Pagination -->
+      <!-- Paginacja -->
       <div v-if="likedPagination.pages > 1" class="mt-6 flex justify-center gap-2">
         <button
           @click="changeLikedPage(-1)"
@@ -118,7 +124,7 @@
       </div>
     </section>
 
-    <!-- BaseModal import for user settings -->
+    <!-- Modal ustawień -->
     <BaseModal
       :show="showSettingsModal"
       title="Ustawienia konta"
@@ -200,10 +206,10 @@
       </div>
     </BaseModal>
 
-    <!-- Modal zmiany avatara -->
+    <!-- Modal zmiany awatara -->
     <BaseModal
       :show="showAvatarModal"
-      title="Zmień zdjęcie profilowe"
+      title="Zmień awatar"
       @close="showAvatarModal = false; newAvatarUrl = ''"
     >
       <ImageUploader v-model="newAvatarUrl" />
@@ -345,7 +351,6 @@ export default {
     const toast = useToast();
     const store = useStore();
     const router = useRouter();
-
     const user = computed(() => store.state.auth.user);
     
     const userInitials = computed(() => {
@@ -360,31 +365,30 @@ export default {
       commentsCount: 0
     });
     
-    // Profile visibility
+    // Widoczność profilu
     const isProfilePublic = ref(true);
     const isSavingVisibility = ref(false);
     
-    // Avatar
+    // Awatar
     const showAvatarModal = ref(false);
     const newAvatarUrl = ref("");
     const isSavingAvatar = ref(false);
 
-    // Liked collections with pagination
+    // Zdjęcia ulubionych kolekcji z paginacją
     const likedCollections = ref([]);
     const likedPagination = ref({ page: 1, limit: 9, total: 0, pages: 1 });
 
-    // Password modal
+    // Modal zmiany hasła
     const showPasswordModal = ref(false);
     
-    // Settings modal
+    // Modal ustawień
     const showSettingsModal = ref(false);
     const showDeleteConfirmation = ref(false);
     const deleteConfirmPassword = ref("");
     const isDeletingAccount = ref(false);
     
-    // Feedback modal
+    // Modal feedback
     const showFeedbackModal = ref(false);
-
     const isChangingPassword = ref(false);
     const passwordServerError = ref("");
 
@@ -400,30 +404,26 @@ export default {
       confirmPassword: ""
     });
 
-    // Use relative time for "on platform since"
-
+    // Pobierz dane użytkownika
     const loadUserData = async () => {
       try {
-        // Pobierz kolekcje użytkownika - endpoint teraz zwraca itemsCount, likesCount, commentsCount
         const response = await CollectionService.getUserCollections({ limit: 100 });
         const collections = response.data?.collections || [];
         
-        // Oblicz statystyki z danych zwróconych przez backend
         stats.value.collectionsCount = collections.length;
         stats.value.itemsCount = collections.reduce((sum, c) => sum + (c.itemsCount || 0), 0);
         stats.value.likesReceived = collections.reduce((sum, c) => sum + (c.likesCount || 0), 0);
         stats.value.commentsCount = collections.reduce((sum, c) => sum + (c.commentsCount || 0), 0);
         
-        // Pobierz ustawienie widoczności profilu
         isProfilePublic.value = user.value?.isProfilePublic !== false;
         
-        // Pobierz polubione kolekcje
         await loadLikedCollections();
       } catch (error) {
         console.error('Błąd ładowania danych profilu:', error);
       }
     };
     
+    // Pobierz polubione kolekcje
     const loadLikedCollections = async (page = 1) => {
       try {
         const response = await CollectionService.getLikedCollections({ 
@@ -442,6 +442,7 @@ export default {
       }
     };
     
+    // Zmień stronę polubionych kolekcji
     const changeLikedPage = (delta) => {
       const newPage = likedPagination.value.page + delta;
       if (newPage > 0 && newPage <= likedPagination.value.pages) {
@@ -449,14 +450,13 @@ export default {
       }
     };
     
+    // Zmień widoczność profilu
     const toggleProfileVisibility = async () => {
       try {
         isSavingVisibility.value = true;
         const newValue = !isProfilePublic.value;
         await AuthService.updateProfileVisibility(newValue);
         isProfilePublic.value = newValue;
-        
-        // Zaktualizuj user w store
         store.commit('auth/UPDATE_USER', { isProfilePublic: newValue });
         
         toast.success(newValue ? 'Profil jest teraz publiczny' : 'Profil jest teraz ukryty');
@@ -468,6 +468,7 @@ export default {
       }
     };
     
+    // Zapisz nowy avatar
     const saveAvatar = async () => {
       if (!newAvatarUrl.value) {
         toast.warning("Wybierz zdjęcie");
@@ -477,10 +478,7 @@ export default {
       isSavingAvatar.value = true;
       try {
         await AuthService.updateAvatar({ avatar: newAvatarUrl.value });
-        
-        // Zaktualizuj user w store
         store.commit('auth/UPDATE_USER', { avatar: newAvatarUrl.value });
-        
         toast.success("Avatar został zmieniony!");
         showAvatarModal.value = false;
         newAvatarUrl.value = "";
@@ -492,14 +490,12 @@ export default {
       }
     };
     
+    // Usuń konto
     const deleteAccount = async () => {
       try {
         isDeletingAccount.value = true;
         await AuthService.deleteAccount(deleteConfirmPassword.value);
-        
         toast.success("Twoje konto zostało trwale usunięte");
-        
-        // Wyloguj i przekieruj
         await store.dispatch("auth/logout");
         router.push("/");
       } catch (error) {
@@ -511,6 +507,7 @@ export default {
       }
     };
 
+    // Walidacja formularza zmiany hasła
     const validatePasswordForm = () => {
       passwordErrors.currentPassword = "";
       passwordErrors.newPassword = "";
@@ -542,6 +539,7 @@ export default {
       return valid;
     };
 
+    // Zmiana hasła
     const submitChangePassword = async () => {
       passwordServerError.value = "";
       if (!validatePasswordForm()) return;
@@ -559,8 +557,6 @@ export default {
         passwordForm.currentPassword = "";
         passwordForm.newPassword = "";
         passwordForm.confirmPassword = "";
-        
-        // Close modal on success
         showPasswordModal.value = false;
       } catch (error) {
         console.error("Błąd zmiany hasła:", error);
@@ -572,6 +568,7 @@ export default {
       }
     };
 
+    // Zamknij modal
     const closePasswordModal = () => {
       showPasswordModal.value = false;
       passwordServerError.value = "";

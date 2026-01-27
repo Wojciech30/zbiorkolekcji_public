@@ -1,3 +1,16 @@
+<!--
+  @component BaseModal
+  @description Reużywalny komponent modalny z animacją, nagłówkiem, 
+  treścią i opcjonalnym footerem. Używa Vue Teleport do renderowania w body.
+  
+  @example
+  <BaseModal :show="isOpen" title="Mój Modal" @close="isOpen = false">
+    <p>Treść modala</p>
+    <template #footer>
+      <button @click="save">Zapisz</button>
+    </template>
+  </BaseModal>
+-->
 <template>
   <Teleport to="body">
     <Transition name="modal">
@@ -10,7 +23,7 @@
           class="bg-white rounded-lg shadow-xl flex flex-col modal-container"
           :style="{ maxHeight: '90vh' }"
         >
-          <!-- Header -->
+          <!-- Header z tytułem i przyciskiem zamknięcia -->
           <div class="p-6 border-b flex items-center justify-between flex-shrink-0">
             <h3 class="text-xl font-semibold">{{ title }}</h3>
             <button 
@@ -22,12 +35,12 @@
             </button>
           </div>
           
-          <!-- Content -->
+          <!-- Główna treść modala (slot domyślny) -->
           <div class="flex-1 overflow-y-auto p-6">
             <slot></slot>
           </div>
           
-          <!-- Footer (optional) -->
+          <!-- Footer - renderowany tylko gdy slot jest użyty -->
           <div v-if="$slots.footer" class="p-6 border-t flex-shrink-0">
             <slot name="footer"></slot>
           </div>
@@ -38,6 +51,21 @@
 </template>
 
 <script>
+/**
+ * @module BaseModal
+ * @description Bazowy komponent modalny używany w całej aplikacji
+ * 
+ * @prop {boolean} show - Czy modal jest widoczny
+ * @prop {string} title - Tytuł wyświetlany w nagłówku
+ * @prop {boolean} showCloseButton - Czy pokazać przycisk X (default: true)
+ * @prop {boolean} closeOnBackdrop - Czy zamknąć po kliknięciu w tło (default: true)
+ * 
+ * @emits close - Emitowane przy zamknięciu modala
+ * 
+ * @slots
+ * - default: Główna treść modala
+ * - footer: Opcjonalny footer (np. przyciski akcji)
+ */
 import { XMarkIcon } from '@heroicons/vue/24/outline'
 
 export default {

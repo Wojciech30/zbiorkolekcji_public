@@ -1,3 +1,7 @@
+<!--
+  @view BlockedAccountView
+  @description Informacja o zablokowanym koncie użytkownika.
+-->
 <template>
   <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-8 text-center">
@@ -41,6 +45,7 @@ export default {
   setup() {
     const store = useStore()
 
+    // Wylogowanie użytkownika
     const handleLogout = async () => {
       await store.dispatch('auth/logout')
     }

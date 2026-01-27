@@ -1,3 +1,21 @@
+/**
+ * @fileoverview Routes uploadu plików
+ * @description Endpointy do przesyłania obrazów (avatary, okładki, zdjęcia przedmiotów).
+ * Używa multer do obsługi multipart/form-data.
+ * 
+ * @module routes/uploads
+ * 
+ * @routes
+ * POST   /                   - Upload pojedynczego obrazu
+ * POST   /multiple           - Upload wielu obrazów (max 10)
+ * DELETE /:filename          - Usuń obraz (tylko właściciel lub admin)
+ * 
+ * @config
+ * - Dozwolone typy: JPEG, PNG, GIF, WebP
+ * - Max rozmiar: 5MB na plik
+ * - Folder: backend/uploads/
+ */
+
 import express from "express";
 import multer from "multer";
 import path from "path";

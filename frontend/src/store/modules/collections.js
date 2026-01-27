@@ -1,3 +1,20 @@
+/**
+ * @fileoverview Vuex moduł kolekcji
+ * @description Zarządzanie stanem kolekcji użytkownika i publicznych.
+ * 
+ * @module store/modules/collections
+ * 
+ * @state
+ * - myCollections, publicCollections, popularCollections
+ * - currentCollection - aktualnie przeglądana
+ * - myPagination, publicPagination - stan paginacji
+ * - loading, error
+ * 
+ * @actions
+ * - fetchMyCollections, fetchPublicCollections, fetchPopularCollections
+ * - fetchCollectionById, createCollection, updateCollection, deleteCollection
+ */
+
 import CollectionService from "@/services/CollectionService";
 
 export default {

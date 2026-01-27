@@ -1,11 +1,17 @@
+<!--
+  @view SingleItemView
+  @description Widok szczegółów przedmiotu.
+  Wyświetla: atrybuty, galerię, komentarze, polubienia.
+  Dla właścicieli: edycja, usuwanie.
+-->
 <template>
   <div class="container mx-auto p-4 max-w-6xl">
-    <!-- Loading State -->
+    <!-- Stan ładowania -->
     <div v-if="isLoading" class="flex justify-center items-center py-20">
       <AppSpinner class="w-12 h-12 text-blue-600" />
     </div>
 
-    <!-- Error State -->
+    <!-- Błąd -->
     <div v-else-if="!item" class="text-center py-20 bg-white rounded-xl shadow-sm">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
         <ExclamationCircleIcon class="w-8 h-8 text-gray-400" />
@@ -17,9 +23,9 @@
       </router-link>
     </div>
 
-    <!-- Content -->
+    <!-- Treść -->
     <div v-else>
-      <!-- Breadcrumbs / Navigation -->
+      <!-- Okruszki nawigacyjne -->
       <nav class="flex text-sm text-gray-500 mb-6 space-x-2 items-center">
         <router-link :to="{ name: 'Home' }" class="hover:text-blue-600 transition-colors">Główna</router-link>
         <span>/</span>
@@ -36,7 +42,7 @@
       </nav>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left Column: Image -->
+        <!-- Lewa kolumna: Obrazek -->
         <div class="lg:col-span-1">
           <div class="bg-white rounded-2xl shadow-lg overflow-hidden sticky top-6">
             <div class="relative aspect-square bg-gray-100">
@@ -47,7 +53,7 @@
                 @error="$event.target.src = '/placeholder-collection.svg'"
               />
               
-              <!-- Like Button Overlay (Mobile) -->
+              <!-- Przycisk polubienia (Mobile) -->
               <button
                 @click="toggleLike"
                 :disabled="isLiking"
@@ -71,7 +77,7 @@
                 </div>
               </div>
               
-              <!-- Actions (Desktop) -->
+              <!-- Akcje (Desktop) -->
               <div class="flex gap-3 mt-4">
                 <button
                   @click="toggleLike"
@@ -97,9 +103,9 @@
           </div>
         </div>
 
-        <!-- Right Column: Details & Comments -->
+        <!-- Prawa kolumna: Szczegóły & Komentarze -->
         <div class="lg:col-span-2 space-y-8">
-          <!-- Item Details -->
+          <!-- Szczegóły przedmiotu -->
           <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
             <div class="border-b border-gray-100 pb-6 mb-6">
               <div class="flex items-start justify-between">
@@ -113,7 +119,7 @@
               <p class="text-gray-600 text-lg leading-relaxed">{{ item.description || "Brak opisu przedmiotu." }}</p>
             </div>
 
-            <!-- Attributes -->
+            <!-- Atrybuty -->
             <div v-if="item.attributes && Object.keys(item.attributes).length > 0">
               <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <TagIcon class="w-5 h-5 text-blue-500" />
@@ -135,14 +141,14 @@
             </div>
           </div>
 
-          <!-- Comments Section -->
+          <!-- Komentarze -->
           <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
             <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <ChatBubbleLeftRightIcon class="w-6 h-6 text-purple-500" />
               Komentarze <span class="text-gray-400 font-normal">({{ comments.length }})</span>
             </h3>
 
-            <!-- Add Comment Form -->
+            <!-- Formularz dodawania komentarza -->
             <div v-if="isAuthenticated" class="mb-8 flex gap-4">
               <div class="flex-shrink-0">
                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
@@ -175,7 +181,7 @@
               </p>
             </div>
 
-            <!-- Comments List -->
+            <!-- Lista komentarzy -->
             <div class="space-y-6">
               <div v-if="comments.length === 0" class="text-center py-8 text-gray-400 italic">
                 Brak komentarzy. Bądź pierwszy!
@@ -216,7 +222,7 @@
                 </div>
               </transition-group>
 
-              <!-- Comments Pagination -->
+              <!-- Strona komentarzy -->
               <div v-if="totalCommentsPages > 1" class="flex justify-center gap-2 mt-6 pt-4 border-t">
                 <button
                   @click="commentsPage--"
@@ -284,7 +290,6 @@ export default {
     const router = useRouter();
     const toast = useToast();
     const store = useStore();
-
     const isLoading = ref(true);
     const item = ref(null);
     const comments = ref([]);
@@ -294,7 +299,7 @@ export default {
     const likesCount = ref(0);
     const hasLiked = ref(false);
 
-    // Comments pagination
+    // Paginacja komentarzy
     const commentsPage = ref(1);
     const commentsPerPage = 10;
     const sortedComments = computed(() => {
@@ -313,9 +318,9 @@ export default {
         return currentUser.value.username.slice(0, 2).toUpperCase();
     });
 
+    // Obsługa struktur obrazów z backendu (uploads/...) i zewnętrznych URL
     const mainImageUrl = computed(() => {
       const images = item.value?.images;
-      // Handle both backend image structure (uploads/...) and external URLs
       const img = (Array.isArray(images) && images.length > 0 && images[0]) 
                   ? images[0] 
                   : item.value?.imageUrl;
@@ -324,10 +329,8 @@ export default {
       return getImageUrl(img);
     });
 
-    // formatDate imported from dateUtils
-
+    // Formatowanie dat
     const formatAttribute = (value) => {
-      // Check if value matches YYYY-MM-DD format
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (typeof value === 'string' && dateRegex.test(value)) {
         return formatDate(value);
@@ -335,6 +338,7 @@ export default {
       return value;
     };
 
+    // Pobieranie danych
     const loadItem = async () => {
       try {
         const response = await ItemService.getItem(route.params.id);
@@ -354,6 +358,7 @@ export default {
       }
     };
 
+    // Pobieranie komentarzy
     const loadComments = async () => {
       try {
         const response = await ItemService.getComments(route.params.id);
@@ -363,6 +368,7 @@ export default {
       }
     };
 
+    // Dodawanie/Usuwanie polubienia
     const toggleLike = async () => {
       if (!isAuthenticated.value) {
         router.push({ name: 'Login', query: { redirect: route.fullPath } });
@@ -376,9 +382,10 @@ export default {
         hasLiked.value = response.data.liked;
         likesCount.value = response.data.likesCount;
         
-        // Update item in local state
         if (hasLiked.value) {
-             toast.success("Polubiono przedmiot!");
+          toast.success("Polubiono przedmiot!");
+        } else {
+          toast.success("Anulowano polubienie!");
         }
       } catch (error) {
         console.error("Błąd polubienia:", error);
@@ -389,11 +396,9 @@ export default {
     };
 
     const shareItem = () => {
-      // Create share logic consistent with CollectionsView
       const url = window.location.href;
       
       try {
-          // Try native share API first
           if (navigator.share) {
               navigator.share({
                   title: item.value.name,
@@ -401,7 +406,6 @@ export default {
                   url: url
               }).catch((e) => console.log('Udostępnianie anulowane', e));
           } else {
-              // Fallback to clipboard
               copyToClipboard(url);
           }
       } catch (e) {
@@ -409,8 +413,8 @@ export default {
       }
     };
 
+    // Kopiowanie linku do schowka (nowoczesne API)
     const copyToClipboard = (text) => {
-        // Fallback for non-secure contexts or browsers without clipboard API
         if (navigator.clipboard) {
             navigator.clipboard.writeText(text).then(() => {
                 toast.success("Link skopiowany do schowka!");
@@ -422,6 +426,7 @@ export default {
         }
     };
     
+    // Kopiowanie linku do schowka (stary sposób)
     const fallbackCopy = (text) => {
         try {
             const textArea = document.createElement("textarea");
@@ -444,6 +449,7 @@ export default {
         }
     };
 
+    // Dodawanie komentarza
     const addComment = async () => {
       if (!newComment.value.trim() || isAddingComment.value) return;
 
@@ -461,6 +467,7 @@ export default {
       }
     };
 
+    // Usuwanie komentarza
     const deleteComment = async (commentId) => {
       if(!confirm("Czy na pewno chcesz usunąć ten komentarz?")) return;
       
@@ -474,12 +481,12 @@ export default {
       }
     };
 
+    // Sprawdzanie możliwości usuwania komentarza
     const canDeleteComment = (comment) => {
       if (!isAuthenticated.value) return false;
       const userId = currentUser.value?.id || currentUser.value?._id;
       const isAuthor = comment.user?._id === userId || comment.user?.id === userId;
       const isAdmin = currentUser.value?.role === "admin";
-      // Also check if user is the collection owner (backend allows owner, author, or admin)
       const collectionOwnerId = item.value?.parentCollection?.owner?._id || item.value?.parentCollection?.owner;
       const isCollectionOwner = collectionOwnerId && (collectionOwnerId === userId || collectionOwnerId.toString?.() === userId);
       return isAuthor || isAdmin || isCollectionOwner;
@@ -528,7 +535,6 @@ export default {
   @apply bg-white rounded-lg py-2 font-medium transition-all shadow-sm active:scale-95;
 }
 
-/* List transition */
 .list-enter-active,
 .list-leave-active {
   transition: all 0.3s ease;

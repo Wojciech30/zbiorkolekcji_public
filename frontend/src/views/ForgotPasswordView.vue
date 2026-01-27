@@ -1,3 +1,8 @@
+<!--
+  @view ForgotPasswordView
+  @description Formularz zapomniałem hasła.
+  Wysyła email z linkiem resetowania.
+-->
 <template>
   <div class="container mx-auto p-4 flex flex-col items-center justify-center min-h-[60vh]">
     <div class="max-w-md w-full bg-white shadow rounded-lg p-6">
@@ -61,12 +66,14 @@ import { useToast } from "vue-toastification";
 export default {
   name: "ForgotPasswordView",
   setup() {
+    // Stan formularza
     const email = ref("");
     const emailError = ref("");
     const serverError = ref("");
     const isSubmitting = ref(false);
     const toast = useToast();
 
+    // Walidacja adresu email
     const validateEmail = () => {
       emailError.value = "";
 
@@ -84,6 +91,7 @@ export default {
       return true;
     };
 
+    // Wysyłanie żądania resetu hasła
     const submitEmail = async () => {
       serverError.value = "";
 

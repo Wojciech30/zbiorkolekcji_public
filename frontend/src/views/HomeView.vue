@@ -1,3 +1,11 @@
+<!--
+  @view HomeView
+  @description Strona główna aplikacji.
+  Wyświetla hero, statystyki globalne, wyszukiwarkę, oraz sekcje:
+  - Popularne kolekcje
+  - Najnowsze kolekcje
+  - Przeglądaj kategorie
+-->
 <template>
   <div class="min-h-screen">
     <!-- Hero Section -->
@@ -131,6 +139,7 @@ export default {
   setup() {
     const store = useStore()
     
+    // Stan danych
     const categories = ref([])
     const popularCollections = ref([])
     const searchQuery = ref('')
@@ -139,20 +148,22 @@ export default {
     const isLoadingPopular = ref(true)
     const stats = ref(null)
 
+    // Uwierzytelnienie z store
     const isAuthenticated = computed(() => store.getters['auth/isAuthenticated'])
 
-    // Debounce search query (300ms delay, minimum 3 characters)
+    // Debounce wyszukiwania (300ms opóźnienie, min. 3 znaki)
     let debounceTimeout = null
     watch(searchQuery, (newValue) => {
       if (debounceTimeout) clearTimeout(debounceTimeout)
       debounceTimeout = setTimeout(() => {
-        // Only search if empty or at least 3 characters
+        // Szukaj tylko jeśli puste lub min. 3 znaki
         if (newValue.trim().length === 0 || newValue.trim().length >= 3) {
           debouncedSearchQuery.value = newValue
         }
       }, 300)
     })
 
+    // Filtrowanie kategorii wg wyszukiwania
     const filteredCategories = computed(() => {
       const query = debouncedSearchQuery.value.trim().toLowerCase()
       if (!query) return categories.value
@@ -161,6 +172,7 @@ export default {
       )
     })
 
+    // Ładowanie kategorii z API
     const loadCategories = async () => {
       isLoadingCategories.value = true
       try {
@@ -173,6 +185,7 @@ export default {
       }
     }
 
+    // Ładowanie najpopularniejszych kolekcji
     const loadPopularCollections = async () => {
       isLoadingPopular.value = true
       try {
@@ -185,6 +198,7 @@ export default {
       }
     }
 
+    // Ładowanie globalnych statystyk
     const loadStats = async () => {
       try {
         const response = await CollectionService.getGlobalStats()
@@ -205,6 +219,7 @@ export default {
       await loadStats()
     })
 
+    // Pobieranie podpisu kategorii
     const getCategorySubtitle = (category) => {
       if (category.description) return category.description
       const count = category.publicCollectionsCount || 0
@@ -373,12 +388,5 @@ export default {
          hover:bg-blue-600 hover:text-white transition-all duration-300;
 }
 
-/* Line clamp */
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* line-clamp-2 now in global tailwind.css */
 </style>

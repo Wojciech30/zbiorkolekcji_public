@@ -1,12 +1,17 @@
+<!--
+  @view UserProfileView
+  @description Publiczny profil innego użytkownika.
+  Wyświetla: avatar, username, publiczne kolekcje, statystyki.
+-->
 <template>
   <div class="container mx-auto p-4">
-    <!-- Loading -->
+    <!-- Ładowanie -->
     <div v-if="isLoading" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
       <p class="mt-4 text-gray-600">Ładowanie profilu...</p>
     </div>
 
-    <!-- Private Profile -->
+    <!-- Profil prywatny -->
     <div v-else-if="isPrivate" class="text-center py-16">
       <div class="bg-gray-100 w-24 h-24 rounded-full mx-auto flex items-center justify-center mb-6">
         <LockClosedIcon class="w-12 h-12 text-gray-400" />
@@ -21,7 +26,7 @@
       </router-link>
     </div>
 
-    <!-- Error -->
+    <!-- Błąd -->
     <div v-else-if="error" class="text-center py-12">
       <UserIcon class="w-16 h-16 mx-auto text-gray-400" />
       <p class="mt-4 text-gray-600">{{ error }}</p>
@@ -30,12 +35,12 @@
       </router-link>
     </div>
 
-    <!-- Profile -->
+    <!-- Profil -->
     <template v-else-if="user">
-      <!-- Header -->
+      <!-- Nagłówek -->
       <header class="mb-8">
         <div class="flex items-center gap-6">
-          <!-- Avatar -->
+          <!-- Awatar -->
           <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
             <img 
               v-if="user.avatar" 
@@ -49,7 +54,7 @@
             </div>
           </div>
 
-          <!-- Info -->
+          <!-- Informacje -->
           <div>
             <h1 class="text-3xl font-bold text-gray-800">{{ user.username }}</h1>
             <p class="text-gray-500 mt-1">
@@ -57,7 +62,7 @@
             </p>
           </div>
 
-          <!-- Share button -->
+          <!-- Przycisk udostępnienia -->
           <div class="ml-auto">
             <button
               @click="shareProfile"
@@ -70,7 +75,7 @@
           </div>
         </div>
 
-        <!-- Stats in styled panels like ProfileView -->
+        <!-- Statystyki w panelach -->
         <div class="grid grid-cols-3 gap-4 mt-6">
           <div class="bg-white rounded-lg shadow p-4 text-center">
             <p class="text-3xl font-bold text-blue-600">{{ stats.collections }}</p>
@@ -87,7 +92,7 @@
         </div>
       </header>
 
-      <!-- Collections -->
+      <!-- Kolekcje -->
       <section>
         <h2 class="text-2xl font-semibold mb-4">
           Publiczne kolekcje 
@@ -110,7 +115,7 @@
           />
         </div>
         
-        <!-- Pagination -->
+        <!-- Paginacja -->
         <div v-if="pagination.pages > 1" class="mt-6 flex justify-center gap-2">
           <button
             @click="changePage(-1)"
@@ -158,7 +163,6 @@ export default {
   setup() {
     const route = useRoute()
     const toast = useToast()
-
     const user = ref(null)
     const stats = ref({ collections: 0, views: 0, likes: 0 })
     const collections = ref([])
@@ -167,6 +171,7 @@ export default {
     const error = ref(null)
     const isPrivate = ref(false)
 
+    // Ładowanie profilu użytkownika
     const loadProfile = async (page = 1) => {
       try {
         isLoading.value = true
@@ -201,6 +206,7 @@ export default {
       }
     }
 
+    // Zmiana strony
     const changePage = (delta) => {
       const newPage = pagination.value.page + delta
       if (newPage > 0 && newPage <= pagination.value.pages) {
@@ -208,8 +214,7 @@ export default {
       }
     }
 
-    // formatDate removed - using formatRelativeTime from utils
-
+    // Udostępnienie profilu
     const shareProfile = () => {
       const url = window.location.href
       

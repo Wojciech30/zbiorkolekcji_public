@@ -1,4 +1,13 @@
-// Helper do generowania URL-i obrazków z backendu
+/**
+ * @fileoverview Utility do generowania URL-i obrazków
+ * @description Konwertuje relatywne ścieżki /uploads na pełne URL-e backendu.
+ * 
+ * @module utils/imageUrl
+ * 
+ * @exports
+ * - getImageUrl(url) - konwertuje relatywny URL na absolutny
+ */
+
 const API_BASE = process.env.VUE_APP_API_BASE_URL || "http://172.23.52.141:3000/api/v1";
 const BACKEND_URL = API_BASE.replace('/api/v1', '');
 

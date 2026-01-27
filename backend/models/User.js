@@ -1,7 +1,30 @@
+/**
+ * @fileoverview Model użytkownika
+ * @description Schema Mongoose dla użytkowników systemu z obsługą autoryzacji,
+ * weryfikacji email i resetowania hasła.
+ */
+
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
+/**
+ * Schema użytkownika
+ * @typedef {Object} UserSchema
+ * @property {string} username - Unikalna nazwa użytkownika (3-30 znaków, alfanumeryczne + _ -)
+ * @property {string} password - Zahashowane hasło (ukryte w zapytaniach)
+ * @property {string} email - Unikalny adres email
+ * @property {string} role - Rola użytkownika: 'admin' lub 'user'
+ * @property {boolean} isActive - Czy konto jest aktywne (można zablokować)
+ * @property {Date} lastLogin - Data ostatniego logowania
+ * @property {boolean} isEmailVerified - Czy email został zweryfikowany
+ * @property {string} emailVerificationToken - Token weryfikacji email (ukryty)
+ * @property {Date} emailVerificationExpires - Data wygaśnięcia tokena weryfikacji
+ * @property {string} passwordResetToken - Token resetowania hasła (ukryty)
+ * @property {Date} passwordResetExpires - Data wygaśnięcia tokena resetu (1h)
+ * @property {string} avatar - URL avatara użytkownika
+ * @property {boolean} isProfilePublic - Czy profil jest publiczny
+ */
 const userSchema = new mongoose.Schema(
     {
         username: {
@@ -17,7 +40,7 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             required: [true, "Hasło jest wymagane"],
-            select: false
+            select: false // Hasło nie jest zwracane w zapytaniach
         },
         email: {
             type: String,
@@ -76,9 +99,10 @@ const userSchema = new mongoose.Schema(
         }
     },
     {
-        timestamps: true,
+        timestamps: true, // Dodaje createdAt i updatedAt
         toJSON: {
             virtuals: true,
+            // Usuwa wrażliwe dane przy serializacji do JSON
             transform: (doc, ret) => {
                 delete ret.password;
                 delete ret.__v;
@@ -92,9 +116,13 @@ const userSchema = new mongoose.Schema(
     }
 );
 
+// Indeks dla wyszukiwania użytkowników (admin panel)
 userSchema.index({ role: 1, createdAt: -1 });
 
-// 🔧 poprawiony hook
+/**
+ * Pre-save hook - hashuje hasło przed zapisem
+ * Uruchamia się tylko gdy hasło zostało zmodyfikowane
+ */
 userSchema.pre("save", async function () {
     if (!this.isModified("password")) return;
 
@@ -102,11 +130,23 @@ userSchema.pre("save", async function () {
     this.password = await bcrypt.hash(this.password, salt);
 });
 
+/**
+ * Metody instancji użytkownika
+ */
 userSchema.methods = {
+    /**
+     * Porównuje podane hasło z zahashowanym hasłem użytkownika
+     * @param {string} candidatePassword - Hasło do sprawdzenia
+     * @returns {Promise<boolean>} Czy hasło jest poprawne
+     */
     comparePassword: async function (candidatePassword) {
         return bcrypt.compare(candidatePassword, this.password);
     },
 
+    /**
+     * Zwraca bezpieczny obiekt profilu użytkownika
+     * @returns {Object} Dane profilu bez wrażliwych informacji
+     */
     toProfile: function () {
         return {
             id: this._id,
@@ -118,6 +158,11 @@ userSchema.methods = {
         };
     },
 
+    /**
+     * Generuje token weryfikacji email
+     * Token wygasa po 24 godzinach
+     * @returns {string} Surowy token (do wysłania w linku)
+     */
     generateEmailVerificationToken: function () {
         const rawToken = crypto.randomBytes(32).toString("hex");
         const hashedToken = crypto
@@ -126,11 +171,16 @@ userSchema.methods = {
             .digest("hex");
 
         this.emailVerificationToken = hashedToken;
-        this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+        this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24h
 
         return rawToken;
     },
 
+    /**
+     * Generuje token resetowania hasła
+     * Token wygasa po 1 godzinie
+     * @returns {string} Surowy token (do wysłania w linku)
+     */
     generatePasswordResetToken: function () {
         const rawToken = crypto.randomBytes(32).toString("hex");
         const hashedToken = crypto
@@ -139,7 +189,7 @@ userSchema.methods = {
             .digest("hex");
 
         this.passwordResetToken = hashedToken;
-        this.passwordResetExpires = Date.now() + 60 * 60 * 1000;
+        this.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1h
 
         return rawToken;
     }

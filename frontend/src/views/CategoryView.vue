@@ -1,9 +1,13 @@
+<!--
+  @view CategoryView
+  @description Widok kategorii z listą jej kolekcji.
+  Wyświetla: nagłówek kategorii, publiczne kolekcje w tej kategorii.
+-->
 <template>
   <div class="container mx-auto p-4">
     <header class="mb-8">
       <h1 class="text-4xl font-bold text-gray-800 mb-2">{{ category.name }}</h1>
       <p class="text-gray-600 text-lg italic" v-if="category.description">{{ category.description }}</p>
-      <!-- Usunięto: <p class="text-gray-500 text-sm" v-else>Brak opisu kategorii</p> zgodnie z prośbą -->
     </header>
 
     <section class="mt-8">
@@ -74,9 +78,11 @@ export default {
   },
   data() {
     return {
+      // Dane kategorii
       category: {},
       collections: [],
       isLoading: true,
+      // Paginacja kolekcji
       pagination: {
         page: 1,
         limit: 9,
@@ -92,11 +98,13 @@ export default {
     }
   },
   computed: {
+    // Sortowanie kolekcji wg wyświetleń (malejąco)
     sortedCollections() {
       return [...this.collections].sort((a, b) => (b.views || 0) - (a.views || 0))
     }
   },
   methods: {
+    // Ładowanie danych kategorii i jej kolekcji
     async loadData() {
       try {
         this.isLoading = true
@@ -108,6 +116,7 @@ export default {
           return this.$router.push('/').catch(() => {})
         }
 
+        // Równoległe ładowanie kategorii i jej kolekcji
         const [categoryRes, collectionsRes] = await Promise.all([
           CategoryService.getCategory(categoryId),
           CategoryService.getCategoryCollections(categoryId, {
@@ -134,12 +143,15 @@ export default {
         this.isLoading = false
       }
     },
+    // Walidacja formatu MongoDB ObjectId
     validateCategoryId(id) {
       return /^[0-9a-fA-F]{24}$/.test(id)
     },
+    // formatDate zaimportowane z dateUtils
     formatDate(isoString) {
       return formatDate(isoString);
     },
+    // Zmiana strony paginacji
     changePage(delta) {
       const newPage = this.pagination.page + delta
       if (newPage > 0 && newPage <= this.pagination.pages) {
@@ -147,6 +159,7 @@ export default {
         this.loadData()
       }
     },
+    // Obsługa błędów API
     handleError(error) {
       console.error('Błąd:', error)
 
@@ -165,13 +178,6 @@ export default {
 </script>
 
 <style scoped>
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
 .animate-spin {
   animation: spin 1s linear infinite;

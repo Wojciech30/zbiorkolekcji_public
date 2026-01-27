@@ -1,13 +1,29 @@
+<!--
+  @component ItemCard
+  @description Karta przedmiotu z obrazem, statystykami i slotem na akcje.
+  Używana w SingleCollectionView do wyświetlania przedmiotów.
+  
+  @example
+  <ItemCard :data="item" />
+  
+  @example z akcjami
+  <ItemCard :data="item">
+    <template #actions>
+      <button @click="edit">Edytuj</button>
+      <button @click="remove">Usuń</button>
+    </template>
+  </ItemCard>
+-->
 <template>
   <div class="card-wrapper">
-    <!-- Action buttons slot -->
+    <!-- Slot na przyciski akcji (widoczne przy hover) -->
     <div v-if="$slots.actions" class="card-actions">
       <slot name="actions" />
     </div>
     
     <router-link :to="`/items/${data.id || data._id}`" class="block group">
       <div class="card-container">
-        <!-- Image -->
+        <!-- Obraz przedmiotu -->
         <div class="card-image">
           <template v-if="hasImage">
             <img
@@ -26,7 +42,7 @@
           <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
 
-        <!-- Content -->
+        <!-- Treść karty -->
         <div class="card-content">
           <h3 class="card-title">{{ data.name }}</h3>
           
@@ -34,7 +50,7 @@
             {{ data.description }}
           </p>
 
-          <!-- Stats -->
+          <!-- Statystyki (polubienia, komentarze) -->
           <div class="card-stats">
             <div v-if="likesCount !== undefined" class="stat-item">
               <HeartIcon class="w-4 h-4" />
@@ -53,6 +69,22 @@
 </template>
 
 <script>
+/**
+ * @module ItemCard
+ * @description Komponent karty przedmiotu
+ * 
+ * @prop {Object} data - Dane przedmiotu:
+ *   - id/_id: ID przedmiotu
+ *   - name: Nazwa
+ *   - description: Opis
+ *   - images: Tablica URL-i obrazów
+ *   - likes: Tablica polubień
+ *   - likesCount: Liczba polubień (opcjonalnie)
+ *   - comments: Tablica komentarzy
+ * 
+ * @slots
+ * - actions: Przyciski akcji (edycja, usuwanie)
+ */
 import { computed } from 'vue'
 import { 
   HeartIcon,
@@ -150,20 +182,12 @@ export default {
   @apply flex items-center gap-1;
 }
 
-/* Line clamp fallback */
+/* Line clamp fallback - line-clamp-2 now in global tailwind.css */
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-clamp: 1;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-clamp: 2;
 }
 </style>

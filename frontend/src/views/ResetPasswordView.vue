@@ -1,3 +1,8 @@
+<!--
+  @view ResetPasswordView
+  @description Formularz ustawiania nowego hasła.
+  Wywoływany z linku w emailu (token w query string).
+-->
 <template>
   <div class="container mx-auto p-4 flex flex-col items-center justify-center min-h-[60vh]">
     <div class="max-w-md w-full bg-white shadow rounded-lg p-6">
@@ -58,7 +63,7 @@
             {{ errors.newPassword }}
           </p>
         </div>
-
+        
         <div>
           <label class="block font-medium mb-1" for="confirmPassword">Powtórz nowe hasło</label>
           <input
@@ -108,7 +113,6 @@ export default {
     const route = useRoute();
     const router = useRouter();
     const toast = useToast();
-
     const token = ref(null);
     const form = reactive({
       newPassword: "",
@@ -131,6 +135,7 @@ export default {
       token.value = typeof t === "string" ? t : null;
     });
 
+    // Walidacja formularza
     const validateForm = () => {
       errors.newPassword = "";
       errors.confirmPassword = "";
@@ -157,6 +162,7 @@ export default {
       return valid;
     };
 
+    // Przesyłanie nowego hasła
     const submitNewPassword = async () => {
       if (!token.value) return;
       if (!validateForm()) return;

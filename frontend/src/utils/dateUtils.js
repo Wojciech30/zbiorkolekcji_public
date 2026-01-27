@@ -1,7 +1,19 @@
 /**
- * Format date as dd.mm.yyyy
- * @param {string|Date} dateString - Date to format
- * @returns {string} Formatted date string
+ * @fileoverview Utility do formatowania dat
+ * @description Funkcje formatujące daty do polskiego formatu.
+ * 
+ * @module utils/dateUtils
+ * 
+ * @exports
+ * - formatDate(date) - dd.mm.yyyy
+ * - formatRelativeTime(date) - "od X dni/miesięcy/lat"
+ * - formatDateTime(date) - dd.mm.yyyy HH:MM
+ */
+
+/**
+ * Formatuje datę jako dd.mm.yyyy
+ * @param {string|Date} dateString - Data do sformatowania
+ * @returns {string} Sformatowana data
  */
 export function formatDate(dateString) {
   if (!dateString) return '';
@@ -13,9 +25,9 @@ export function formatDate(dateString) {
 }
 
 /**
- * Format relative time for "on platform since" display
- * @param {string|Date} dateString - Date to format
- * @returns {string} Relative time string in Polish
+ * Formatuje relatywny czas ("od X dni/miesięcy/lat")
+ * @param {string|Date} dateString - Data do sformatowania
+ * @returns {string} Relatywny czas po polsku
  */
 export function formatRelativeTime(dateString) {
   if (!dateString) return '';
@@ -35,23 +47,19 @@ export function formatRelativeTime(dateString) {
     return `${weeks} tygodni`;
   } else if (diffMonths < 2) {
     return 'miesiąca';
-  } else if (diffMonths < 5) {
-    return `${diffMonths} miesięcy`;
   } else if (diffMonths < 12) {
     return `${diffMonths} miesięcy`;
   } else if (diffYears === 1) {
     return 'roku';
-  } else if (diffYears < 5) {
-    return `${diffYears} lat`;
   } else {
     return `${diffYears} lat`;
   }
 }
 
 /**
- * Format date and time as dd.mm.yyyy HH:MM
- * @param {string|Date} dateString - Date to format
- * @returns {string} Formatted date and time string
+ * Formatuje datę i czas jako dd.mm.yyyy HH:MM
+ * @param {string|Date} dateString - Data do sformatowania
+ * @returns {string} Sformatowana data i czas
  */
 export function formatDateTime(dateString) {
   if (!dateString) return '';

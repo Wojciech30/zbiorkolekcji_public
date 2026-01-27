@@ -1,3 +1,24 @@
+/**
+ * @fileoverview Vuex moduł autentykacji
+ * @description Zarządzanie stanem logowania użytkownika, tokenami JWT,
+ * i trwałością sesji (localStorage/sessionStorage).
+ * 
+ * @module store/modules/auth
+ * 
+ * @state
+ * - user: Zalogowany użytkownik lub null
+ * - accessToken, refreshToken: Tokeny JWT
+ * 
+ * @mutations
+ * - SET_USER, SET_TOKENS, UPDATE_USER, LOGOUT
+ * 
+ * @actions
+ * - login, logout, refreshToken
+ * 
+ * @getters
+ * - isAuthenticated, isAdmin, isBlocked
+ */
+
 import AuthService from "@/services/AuthService";
 import router from "@/router";
 

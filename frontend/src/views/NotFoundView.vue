@@ -1,3 +1,7 @@
+<!--
+  @view NotFoundView
+  @description Strona 404 - nie znaleziono.
+-->
 <template>
   <div class="container mx-auto p-4 min-h-screen flex items-center justify-center">
     <div class="text-center max-w-2xl">
@@ -32,6 +36,7 @@
 <script>
 export default {
   name: 'NotFoundView',
+  // SEO meta tagi dla strony 404
   metaInfo() {
     return {
       title: '404 - Strona nie znaleziona',

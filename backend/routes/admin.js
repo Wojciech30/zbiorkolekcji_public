@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Routes panelu administratora
+ * @description Endpointy administracyjne do zarządzania użytkownikami i kolekcjami.
+ * Wszystkie endpointy wymagają autentykacji i roli admin.
+ * 
+ * @module routes/admin
+ * 
+ * @routes
+ * GET    /users              - Lista użytkowników (paginacja, wyszukiwanie)
+ * POST   /users/:id/block    - Zablokuj użytkownika (usuwa kolekcje i przedmioty)
+ * POST   /users/:id/unblock  - Odblokuj użytkownika
+ * GET    /collections        - Lista wszystkich kolekcji (publiczne/prywatne)
+ * 
+ * @access Admin only - wszystkie endpointy chronione przez authenticateToken + checkAdmin
+ */
+
 import express from "express";
 import User from "../models/User.js";
 import Collection from "../models/Collection.js";

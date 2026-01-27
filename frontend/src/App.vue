@@ -1,3 +1,8 @@
+<!--
+  @component App
+  @description Główny komponent aplikacji.
+  Zawiera: AppHeader, router-view, stopkę z przyciskiem zgłaszania problemów.
+-->
 <template>
   <div id="app">
     <!-- Nagłówek -->

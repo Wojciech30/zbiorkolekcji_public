@@ -1,12 +1,18 @@
+<!--
+  @view SingleCollectionView
+  @description Widok szczegółów kolekcji.
+  Wyświetla: nagłówek, przedmioty, komentarze, statystyki, polubienia.
+  Dla właścicieli: edycja, usuwanie, zarządzanie przedmiotami.
+-->
 <template>
   <div class="container mx-auto p-4">
-    <!-- Header: Title + Meta info -->
+    <!-- Header: Tytuł + Informacje meta -->
     <header v-if="collection" class="mb-8 text-center">
       <h1 class="text-4xl font-bold text-gray-800">{{ collection.name }}</h1>
       
-      <!-- Meta row: Category, Owner, Like -->
+      <!-- Meta row: Kategoria, Właściciel, Liczba wyświetleń, Liczba polubień -->
       <div class="flex flex-wrap items-center justify-center gap-4 mt-4 text-sm">
-        <!-- Category -->
+        <!-- Kategoria -->
         <div v-if="collection.category" class="flex items-center gap-2 text-gray-600">
           <FolderIcon class="w-4 h-4" />
           <router-link
@@ -17,7 +23,7 @@
           </router-link>
         </div>
 
-        <!-- Owner -->
+        <!-- Właściciel -->
         <div v-if="collection.owner" class="flex items-center gap-2">
           <router-link 
             :to="`/users/${collection.owner._id || collection.owner.id}`"
@@ -39,13 +45,13 @@
           </router-link>
         </div>
 
-        <!-- Views -->
+        <!-- Liczba wyświetleń -->
         <div class="flex items-center gap-1 text-gray-500">
           <EyeIcon class="w-4 h-4" />
           <span>{{ collection.views || 0 }}</span>
         </div>
 
-        <!-- Like button (integrated) -->
+        <!-- Przycisk polubienia (integrowany) -->
         <button
           @click="toggleCollectionLike"
           :disabled="isLikingCollection || !isAuthenticated"
@@ -59,7 +65,7 @@
           <span>{{ collectionLikesCount }}</span>
         </button>
 
-        <!-- Share button -->
+        <!-- Przycisk udostępnienia -->
         <button
           @click="shareCollection"
           class="flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
@@ -69,7 +75,7 @@
           <span>Udostępnij</span>
         </button>
 
-        <!-- Manage access button -->
+        <!-- Przycisk zarządzania dostępem -->
         <button
           v-if="canEdit && collection.privacy === 'private'"
           @click="openAllowedUsersModal"
@@ -80,11 +86,11 @@
         </button>
       </div>
 
-      <!-- Description -->
+      <!-- Opis -->
       <p v-if="collection.description" class="text-gray-600 mt-4">{{ collection.description }}</p>
     </header>
 
-    <!-- Items Section -->
+    <!-- Sekcja przedmiotów -->
     <section class="mb-8">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-semibold">
@@ -109,6 +115,7 @@
         Brak przedmiotów w tej kolekcji.
       </div>
 
+      <!-- Lista przedmiotów -->
       <template v-else>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
@@ -137,7 +144,7 @@
           </div>
         </div>
 
-        <!-- Pagination -->
+        <!-- Paginacja przedmiotów -->
         <div v-if="totalItemPages > 1" class="flex justify-center gap-2 mt-6">
           <button
             @click="itemsPage--"
@@ -160,7 +167,7 @@
       </template>
     </section>
 
-    <!-- Comments Section -->
+    <!-- Sekcja komentarzy -->
     <section v-if="collection" class="mb-8">
       <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
         <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -168,7 +175,7 @@
           Komentarze <span class="text-gray-400 font-normal">({{ collectionComments.length }})</span>
         </h2>
 
-        <!-- Add comment -->
+        <!-- Dodawanie komentarza -->
         <div v-if="isAuthenticated" class="mb-8 flex gap-4">
           <div class="flex-shrink-0">
             <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
@@ -201,7 +208,7 @@
           </p>
         </div>
 
-        <!-- Comments list -->
+        <!-- Lista komentarzy -->
         <div class="space-y-6">
           <div v-if="collectionComments.length === 0" class="text-center py-8 text-gray-400 italic">
             Brak komentarzy. Bądź pierwszy!
@@ -213,6 +220,7 @@
               :key="comment._id"
               class="flex gap-4 group"
             >
+              <!-- Autor komentarza -->
               <div class="flex-shrink-0">
                 <div v-if="comment.user?.avatar" class="w-10 h-10 rounded-full overflow-hidden">
                   <img :src="getImageUrl(comment.user.avatar)" class="w-full h-full object-cover" />
@@ -222,6 +230,7 @@
                 </div>
               </div>
               
+              <!-- Komentarz -->
               <div class="flex-grow bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors">
                 <div class="flex justify-between items-start mb-2">
                   <div>
@@ -242,7 +251,7 @@
             </div>
           </transition-group>
 
-          <!-- Comments Pagination -->
+          <!-- Komentarze - paginacja -->
           <div v-if="totalCommentsPages > 1" class="flex justify-center gap-2 mt-6 pt-4 border-t">
             <button
               @click="commentsPage--"
@@ -295,6 +304,7 @@
               />
             </div>
 
+            <!-- Opis przedmiotu -->
             <div>
               <label
                 for="itemDescription"
@@ -309,6 +319,7 @@
               ></textarea>
             </div>
 
+            <!-- Zdjęcie przedmiotu -->
             <div>
               <label
                 class="block text-sm font-medium text-gray-700 mb-1"
@@ -324,6 +335,7 @@
             >
               <h3 class="text-lg font-semibold mb-2">Atrybuty</h3>
 
+              <!-- Atrybuty przedmiotu -->
               <div
                 v-for="attr in collection.category.attributes"
                 :key="attr.name"
@@ -444,6 +456,7 @@
           Dla kolekcji prywatnej: {{ collection.name }}
         </p>
 
+        <!-- Dodawanie użytkownika do listy dozwolonych -->
         <div class="flex-1 min-h-0 overflow-y-auto">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -465,6 +478,7 @@
             </div>
           </div>
 
+          <!-- Lista użytkowników z dostępem -->
           <div>
             <h3 class="font-semibold text-gray-700 mb-2">
               Użytkownicy z dostępem ({{ allowedUsersList.length }})
@@ -538,7 +552,7 @@ export default {
 
     const isEditingItem = ref(false);
 
-    // Items pagination
+    // Paginacja przedmiotów
     const itemsPage = ref(1);
     const itemsPerPage = 9;
     const totalItemPages = computed(() => Math.ceil(items.value.length / itemsPerPage));
@@ -547,7 +561,7 @@ export default {
       return items.value.slice(start, start + itemsPerPage);
     });
 
-    // Collection likes/comments
+    // Polubienia i komentarze kolekcji
     const isAuthenticated = computed(() => store.getters['auth/isAuthenticated']);
     const collectionComments = ref([]);
     const newCollectionComment = ref('');
@@ -556,7 +570,7 @@ export default {
     const hasLikedCollection = ref(false);
     const collectionLikesCount = ref(0);
 
-    // Comments pagination
+    // Paginacja komentarzy
     const commentsPage = ref(1);
     const commentsPerPage = 10;
     const sortedCollectionComments = computed(() => {
@@ -581,6 +595,7 @@ export default {
 
     const showAddItemForm = ref(false);
 
+    // Sprawdzanie czy użytkownik może edytować kolekcję
     const canEdit = computed(() => {
       if (!loggedUser.value) return false;
       if (!collection.value || !collection.value.owner) return false;
@@ -593,19 +608,21 @@ export default {
       return ownerId && userId.value && ownerId.toString() === userId.value.toString();
     });
 
+    // Pobieranie URL obrazka
     const getItemCoverUrl = (item) => {
       const fromImages = Array.isArray(item?.images) && item.images.length > 0 ? item.images[0] : null;
       const url = fromImages || item?.imageUrl;
       return url ? getImageUrl(url) : "/placeholder.png";
     };
 
+    // Ładowanie kolekcji
     const loadCollection = async () => {
       try {
         const response = await CollectionService.getCollection(route.params.id);
         const data = response.data || response;
         collection.value = data.collection || data;
         
-        // Load likes
+        // Ładowanie polubień kolekcji
         if (collection.value) {
            collectionLikesCount.value = collection.value.likesCount || (collection.value.likes?.length || 0);
            if (userId.value && collection.value.likes) {
@@ -618,6 +635,7 @@ export default {
       }
     };
 
+    // Ładowanie przedmiotów
     const loadItems = async () => {
       try {
         const response = await ItemService.getItemsByCollection(route.params.id);
@@ -630,6 +648,7 @@ export default {
       }
     };
 
+    // Otwieranie formularza dodawania nowego przedmiotu
     const openAddItemForm = () => {
       newItem.value = {
         name: "",
@@ -660,6 +679,7 @@ export default {
       showAddItemForm.value = true;
     };
 
+    // Dodawanie nowego przedmiotu
     const handleAddItem = async () => {
       if (collection.value.category?.attributes) {
         Object.keys(newItem.value.attributes).forEach((key) => {
@@ -730,6 +750,7 @@ export default {
       }
     };
 
+    // Edycja przedmiotu
     const updateItem = (item) => {
       isEditingItem.value = true;
 
@@ -765,6 +786,7 @@ export default {
       showAddItemForm.value = true;
     };
 
+    // Zamykanie formularza dodawania przedmiotu
     const closeAddItemForm = () => {
       isEditingItem.value = false;
       showAddItemForm.value = false;
@@ -776,6 +798,7 @@ export default {
       };
     };
 
+    // Usuwanie przedmiotu
     const deleteItem = async (itemId) => {
       try {
         await ItemService.deleteItem(itemId);
@@ -787,6 +810,7 @@ export default {
       }
     };
 
+    // Otwieranie modalu z listą użytkowników dozwolonych
     const openAllowedUsersModal = async () => {
       showAllowedUsersModal.value = true;
       try {
@@ -801,11 +825,13 @@ export default {
       }
     };
 
+    // Zamykanie modalu z listą użytkowników dozwolonych
     const closeAllowedUsersModal = () => {
       showAllowedUsersModal.value = false;
       newAllowedUser.value = "";
     };
 
+    // Dodawanie użytkownika do listy dozwolonych
     const addAllowedUser = async () => {
       if (!newAllowedUser.value) {
         toast.error("Podaj nazwę użytkownika");
@@ -827,6 +853,7 @@ export default {
       }
     };
 
+    // Usuwanie użytkownika
     const removeAllowedUser = async (userIdToRemove) => {
       try {
         await CollectionService.removeAllowedUser(
@@ -843,6 +870,7 @@ export default {
       }
     };
 
+    // Pobieranie wartości atrybutu
     const getAttributeValue = (attr) => {
       if (!newItem.value.attributes[attr.name]) {
         newItem.value.attributes[attr.name] = {
@@ -853,6 +881,7 @@ export default {
       return newItem.value.attributes[attr.name].value;
     };
 
+    // Ustawianie wartości atrybutu
     const setAttributeValue = (attr, value) => {
       if (!newItem.value.attributes[attr.name]) {
         newItem.value.attributes[attr.name] = {
@@ -864,6 +893,7 @@ export default {
       }
     };
 
+    // Inkrementacja liczby wyświetleń
     const incrementViews = async () => {
       try {
         await CollectionService.incrementViews(route.params.id);
@@ -872,8 +902,7 @@ export default {
       }
     };
 
-    // formatDate imported from dateUtils
-
+    // Pobieranie komentarzy
     const loadCollectionComments = async () => {
       try {
         const response = await CollectionService.getComments(route.params.id);
@@ -883,6 +912,7 @@ export default {
       }
     };
 
+    // Dodawanie komentarza
     const addCollectionComment = async () => {
        if (!newCollectionComment.value.trim()) return;
        try {
@@ -899,6 +929,7 @@ export default {
        }
     };
 
+    // Usuwanie komentarza
     const deleteCollectionComment = async (commentId) => {
       if (!confirm("Czy na pewno chcesz usunąć ten komentarz?")) return;
       
@@ -912,6 +943,7 @@ export default {
       }
     };
 
+    // Sprawdzanie możliwości usuwania komentarza
     const canDeleteCollectionComment = (comment) => {
       if (!loggedUser.value) return false;
       const isAdmin = store.getters['auth/isAdmin'];
@@ -923,9 +955,9 @@ export default {
       return isOwner || isAuthor;
     };
 
+    // Polubienia kolekcji
     const toggleCollectionLike = async () => {
       if (!isAuthenticated.value) {
-        // Redirect to login similar to item like
         router.push({ 
           path: "/login", 
           query: { redirect: route.fullPath } 
@@ -963,7 +995,7 @@ export default {
       try {
         copied = document.execCommand('copy');
       } catch (error) {
-        // Copy failed silently
+        // Kopiowanie nie powiodło się
       }
       
       textArea.remove();
@@ -997,13 +1029,9 @@ export default {
       deleteItem,
       getItemCoverUrl,
       getImageUrl,
-      
-      // Items pagination
       itemsPage,
       totalItemPages,
       paginatedItems,
-      
-      // Allowed users stats
       showAllowedUsersModal,
       allowedUsersList,
       newAllowedUser,
@@ -1011,11 +1039,8 @@ export default {
       closeAllowedUsersModal,
       addAllowedUser,
       removeAllowedUser,
-      
       getAttributeValue,
       setAttributeValue,
-
-      // Comments and Likes
       isAuthenticated,
       collectionComments,
       newCollectionComment,
@@ -1031,7 +1056,6 @@ export default {
       formatDate,
       userInitials,
       route,
-      // Comments pagination
       commentsPage,
       totalCommentsPages,
       paginatedCollectionComments
@@ -1051,11 +1075,5 @@ export default {
   @apply bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors;
 }
 
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* line-clamp-2 now in global tailwind.css */
 </style>

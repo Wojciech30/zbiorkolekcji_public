@@ -1,7 +1,15 @@
 /**
- * Image resize utility using Canvas API
- * Resizes images before upload to maintain consistent dimensions
+ * @fileoverview Utility do skalowania obrazów
+ * @description Skaluje obrazy przed uploadem używając Canvas API.
+ * 
+ * @module utils/imageResize
+ * 
+ * @exports
+ * - resizeImage(file, maxW, maxH, quality) - zwraca Blob
+ * - resizeImageAsFile(file, maxW, maxH) - zwraca File
  */
+
+/**
 
 /**
  * Resize an image file to fit within specified max dimensions

@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Routes wsparcia/feedbacku
+ * @description Endpoint do zgłaszania problemów przez użytkowników.
+ * 
+ * @module routes/support
+ * 
+ * @routes
+ * POST /report - Wyślij zgłoszenie problemu (z opcjonalnym screenshotem)
+ * 
+ * @access Authenticated users only
+ */
+
 import express from "express";
 import authenticateToken from "../middleware/authenticateToken.js";
 import { sendFeedbackEmail } from "../config/mailer.js";

@@ -1,3 +1,23 @@
+/**
+ * @fileoverview Routes kategorii
+ * @description Endpointy zarządzania kategoriami kolekcji.
+ * Kategorie definiują schemat atrybutów dla przedmiotów.
+ * 
+ * @module routes/categories
+ * 
+ * @routes
+ * POST   /                 - Utwórz kategorię (Admin only)
+ * GET    /                 - Lista kategorii (z liczbą kolekcji)
+ * GET    /:id              - Szczegóły kategorii
+ * PUT    /:id              - Aktualizuj kategorię (Admin only)
+ * DELETE /:id              - Usuń kategorię (Admin only, jeśli brak kolekcji)
+ * GET    /:id/collections  - Publiczne kolekcje w kategorii
+ * 
+ * @access
+ * - Odczyt: Publiczny
+ * - Zapis: Tylko administratorzy
+ */
+
 import express from "express";
 import Category from "../models/Category.js";
 import Collection from "../models/Collection.js";
@@ -7,6 +27,13 @@ import checkAdmin from "../middleware/checkAdmin.js";
 import mongoose from "mongoose";
 
 const router = express.Router();
+
+/**
+ * Obsługa błędów z walidacją Mongoose
+ * @param {Object} res - Response object
+ * @param {Error} error - Błąd
+ * @param {string} defaultMessage - Domyślny komunikat
+ */
 
 const handleError = (res, error, defaultMessage) => {
     console.error(error);

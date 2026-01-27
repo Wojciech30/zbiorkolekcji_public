@@ -1,3 +1,9 @@
+<!--
+  @view AdminPanelView
+  @description Panel administratora.
+  Zarządzanie: użytkownicy (blokowanie), kolekcje, kategorie.
+  Wymaga roli admin.
+-->
 <template>
   <div class="container mx-auto p-4">
     <header class="mb-8">
@@ -495,17 +501,16 @@ export default {
       description: '',
       attributes: []
     })
-
-    // Modal edycji kategorii
     const isEditModalOpen = ref(false)
     const editedCategory = ref(null)
 
-    // formatDate uses shared formatDateTime from dateUtils
+    // Formatowanie daty
     const formatDate = (dateString) => {
       if (!dateString) return 'Nigdy';
       return formatDateTime(dateString);
     };
 
+    // Ładowanie danych
     const loadData = async () => {
       try {
         const categoriesResponse = await CategoryService.getCategories()
@@ -523,6 +528,7 @@ export default {
       }
     }
 
+    // Ładowanie użytkowników
     const loadUsers = async (page = 1) => {
       try {
         const response = await AdminService.getUsers({ 
@@ -538,6 +544,7 @@ export default {
       }
     }
 
+    // Ładowanie kolekcji
     const loadCollections = async (page = 1) => {
       try {
         const response = await AdminService.getAllCollections({ page, limit: 20 })
@@ -549,6 +556,7 @@ export default {
       }
     }
 
+    // Wyszukiwanie użytkowników
     const debouncedSearchUsers = () => {
       if (searchTimeout) clearTimeout(searchTimeout)
       searchTimeout = setTimeout(() => {
@@ -587,6 +595,7 @@ export default {
       }
     }
 
+    // Odblokowywanie użytkownika
     const unblockUser = async (user) => {
       try {
         isProcessing.value = true
@@ -646,6 +655,7 @@ export default {
       [attrs[index], attrs[index + 1]] = [attrs[index + 1], attrs[index]];
     }
 
+    // Dodawanie kategorii
     const addCategory = async () => {
       try {
         isProcessing.value = true
@@ -776,6 +786,7 @@ export default {
       }
     };
 
+    // Sprawdzenie uprawnień administratora
     const checkAdminAccess = () => {
       if (!store.getters['auth/isAdmin']) {
         toast.error('Brak uprawnień administratora');

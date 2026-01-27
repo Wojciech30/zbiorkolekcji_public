@@ -1,3 +1,24 @@
+/**
+ * @fileoverview Konfiguracja wysyłania emaili
+ * @description Obsługa nodemailer dla emaili weryfikacyjnych, resetowania hasła i feedbacku.
+ * W development używa MailDev, w production prawdziwego SMTP.
+ * 
+ * @module config/mailer
+ * 
+ * @exports
+ * - sendEmail - podstawowa funkcja wysyłania
+ * - sendVerificationEmail - email weryfikacyjny
+ * - sendPasswordResetEmail - email resetowania hasła
+ * - sendFeedbackEmail - zgłoszenie do admina
+ * 
+ * @env
+ * - NODE_ENV - production/development
+ * - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS - produkcyjny SMTP
+ * - MAILDEV_HOST, MAILDEV_PORT - development SMTP
+ * - EMAIL_FROM - adres nadawcy
+ * - FRONTEND_URL - bazowy URL frontendu
+ */
+
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import path from "path";

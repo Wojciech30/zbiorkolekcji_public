@@ -1,9 +1,37 @@
+/**
+ * @fileoverview Middleware uprawnień do kolekcji
+ * @description Zestaw middleware do weryfikacji dostępu i własności
+ * kolekcji. Uwzględnia prywatność, allowed users i role admina.
+ * 
+ * @module middleware/collectionMiddleware
+ */
+
 import mongoose from "mongoose";
 import Collection from "../models/Collection.js";
 import User from "../models/User.js";
 
+/**
+ * Middleware weryfikacji dostępu do kolekcji
+ * 
+ * @description
+ * Sprawdza czy użytkownik może CZYTAĆ kolekcję:
+ * - Publiczne kolekcje: dostęp dla wszystkich
+ * - Prywatne kolekcje: tylko właściciel, admin lub użytkownik z allowedUsers
+ * 
+ * Po weryfikacji dołącza kolekcję do req.collection
+ * 
+ * @param {Object} req - Obiekt request (req.params.id wymagane)
+ * @param {Object} res - Obiekt response
+ * @param {Function} next - Następny middleware
+ * 
+ * @returns {void|Object}
+ * - 404 jeśli kolekcja nie istnieje
+ * - 401 jeśli prywatna i brak autoryzacji
+ * - 403 jeśli prywatna i brak dostępu
+ */
 export const verifyCollectionAccess = async (req, res, next) => {
   try {
+    // Pobierz kolekcję z populacją właściciela i kategorii
     const collection = await Collection.findById(req.params.id)
       .populate("owner", "_id username avatar")
       .populate("category", "name attributes")
@@ -16,11 +44,13 @@ export const verifyCollectionAccess = async (req, res, next) => {
       });
     }
 
+    // Publiczne kolekcje - dostęp dla wszystkich
     if (collection.privacy === "public") {
       req.collection = collection;
       return next();
     }
 
+    // Prywatne kolekcje - sprawdź uprawnienia
     const userId = req.user?._id ? req.user._id.toString() : null;
 
     if (!userId) {
@@ -53,6 +83,23 @@ export const verifyCollectionAccess = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware weryfikacji własności kolekcji
+ * 
+ * @description
+ * Sprawdza czy użytkownik może MODYFIKOWAĆ kolekcję.
+ * Musi być właścicielem lub adminem.
+ * UWAGA: Wymaga wcześniejszego wywołania verifyCollectionAccess!
+ * 
+ * @param {Object} req - Obiekt request (req.collection wymagane)
+ * @param {Object} res - Obiekt response
+ * @param {Function} next - Następny middleware
+ * 
+ * @returns {void|Object}
+ * - 401 jeśli brak autoryzacji
+ * - 403 jeśli nie jest właścicielem/adminem
+ * - 500 jeśli brak req.collection
+ */
 export const verifyCollectionOwnership = (req, res, next) => {
   try {
     if (!req.user?._id) {
@@ -62,6 +109,7 @@ export const verifyCollectionOwnership = (req, res, next) => {
       });
     }
 
+    // Sprawdź czy middleware dostępu był wywołany
     if (!req.collection) {
       return res.status(500).json({
         code: "SERVER_ERROR",
@@ -91,10 +139,28 @@ export const verifyCollectionOwnership = (req, res, next) => {
   }
 };
 
+/**
+ * Middleware walidacji listy allowedUsers
+ * 
+ * @description
+ * Waliduje pole allowedUsers przy tworzeniu/edycji kolekcji:
+ * - Nie można dodać użytkowników do kolekcji publicznej
+ * - Wszystkie ID muszą być prawidłowymi ObjectId
+ * - Wszyscy użytkownicy muszą istnieć i być aktywni
+ * - Nie można dodać samego siebie
+ * 
+ * @param {Object} req - Obiekt request
+ * @param {Object} res - Obiekt response
+ * @param {Function} next - Następny middleware
+ * 
+ * @returns {void|Object}
+ * - 400 z różnymi kodami błędów w zależności od problemu
+ */
 export const validateAllowedUsers = async (req, res, next) => {
   try {
     const { privacy, allowedUsers } = req.body;
 
+    // Publiczna kolekcja nie może mieć allowedUsers
     if (privacy === "public" && Array.isArray(allowedUsers) && allowedUsers.length > 0) {
       return res.status(400).json({
         code: "PUBLIC_COLLECTION_CONFLICT",
@@ -102,6 +168,7 @@ export const validateAllowedUsers = async (req, res, next) => {
       });
     }
 
+    // Nie waliduj jeśli nie jest prywatna lub brak allowedUsers
     if (privacy !== "private") {
       return next();
     }
@@ -110,6 +177,7 @@ export const validateAllowedUsers = async (req, res, next) => {
       return next();
     }
 
+    // Walidacja formatu tablicy
     if (!Array.isArray(allowedUsers)) {
       return res.status(400).json({
         code: "ALLOWED_USERS_INVALID",
@@ -117,6 +185,7 @@ export const validateAllowedUsers = async (req, res, next) => {
       });
     }
 
+    // Walidacja ObjectId
     const invalidIds = allowedUsers.filter(id => !mongoose.Types.ObjectId.isValid(id));
     if (invalidIds.length > 0) {
       return res.status(400).json({
@@ -128,6 +197,7 @@ export const validateAllowedUsers = async (req, res, next) => {
 
     const requesterId = req.user?._id ? req.user._id.toString() : null;
 
+    // Sprawdź czy wszyscy użytkownicy istnieją
     const users = await User.find({ _id: { $in: allowedUsers } }).select("_id isActive");
     const existingIds = new Set(users.map(u => u._id.toString()));
 
@@ -140,6 +210,7 @@ export const validateAllowedUsers = async (req, res, next) => {
       });
     }
 
+    // Sprawdź czy użytkownicy są aktywni
     const inactive = users.filter(u => u.isActive === false).map(u => u._id.toString());
     if (inactive.length > 0) {
       return res.status(400).json({
@@ -149,6 +220,7 @@ export const validateAllowedUsers = async (req, res, next) => {
       });
     }
 
+    // Nie można dodać samego siebie
     if (requesterId && allowedUsers.some(id => id.toString() === requesterId)) {
       return res.status(400).json({
         code: "ALLOWED_USERS_SELF",

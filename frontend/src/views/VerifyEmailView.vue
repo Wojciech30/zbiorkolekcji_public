@@ -1,3 +1,8 @@
+<!--
+  @view VerifyEmailView
+  @description Strona weryfikacji emaila.
+  Obsługuje token z URL i wyświetla status weryfikacji.
+-->
 <template>
   <div class="container mx-auto p-4 flex flex-col items-center justify-center min-h-[60vh]">
     <div class="max-w-md w-full bg-white shadow rounded-lg p-6 text-center">
@@ -39,7 +44,6 @@ export default {
     const route = useRoute();
     const router = useRouter();
     const toast = useToast();
-
     const isLoading = ref(true);
     const success = ref(false);
     const title = ref("");
@@ -69,8 +73,6 @@ export default {
         message.value = response.message || "Możesz się teraz zalogować.";
 
         toast.success("Adres e-mail został potwierdzony 🎉");
-
-        // automatyczne przekierowanie po 3 sekundach
         setTimeout(() => {
           router.push({ name: "Login" });
         }, 3000);

@@ -1,3 +1,8 @@
+<!--
+  @view RegisterView
+  @description Formularz rejestracji nowego użytkownika.
+  Walidacja pól, wysyłka emaila weryfikacyjnego.
+-->
 <template>
   <div>
     <h1 class="text-3xl font-bold text-center mb-6">Rejestracja</h1>
@@ -83,6 +88,7 @@ export default {
     const isSubmitting = ref(false);
     const serverError = ref("");
 
+    // Schema walidacji formularza
     const schema = yup.object({
       username: yup.string().required("Nazwa użytkownika jest wymagana"),
       email: yup
@@ -95,11 +101,13 @@ export default {
           .required("Hasło jest wymagane")
     });
 
+    // Pola formularza z vee-validate
     const { handleSubmit, errors } = useForm({ validationSchema: schema });
     const { value: username } = useField("username");
     const { value: email } = useField("email");
     const { value: password } = useField("password");
 
+    // Obsługa rejestracji
     const registerUser = handleSubmit(async (values) => {
       isSubmitting.value = true;
       serverError.value = "";

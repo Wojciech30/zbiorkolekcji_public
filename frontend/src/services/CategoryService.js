@@ -1,3 +1,18 @@
+/**
+ * @fileoverview Serwis API kategorii
+ * @description Metody CRUD dla kategorii kolekcji.
+ * 
+ * @module services/CategoryService
+ * 
+ * @methods
+ * - getCategories() - lista kategorii
+ * - getCategory(id) - szczegóły kategorii
+ * - createCategory(data) - tworzenie (admin)
+ * - updateCategory(id, updates) - aktualizacja (admin)
+ * - deleteCategory(id) - usuwanie (admin)
+ * - getCategoryCollections(id) - kolekcje w kategorii
+ */
+
 import apiClient from './apiClient';
 
 export default {

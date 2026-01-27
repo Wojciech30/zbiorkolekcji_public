@@ -1,13 +1,28 @@
+<!--
+  @component CollectionCard
+  @description Reużywalna karta kolekcji z okładką, statystykami i badge'em prywatności.
+  Automatycznie linkuje do odpowiedniej strony w zależności od typu (collection/item/category).
+  
+  @example
+  <CollectionCard :data="collection" showStats showOwner />
+  
+  @example z akcjami (edycja/usuwanie)
+  <CollectionCard :data="collection">
+    <template #actions>
+      <button @click="edit">Edytuj</button>
+    </template>
+  </CollectionCard>
+-->
 <template>
   <div class="card-wrapper">
-    <!-- Action buttons slot -->
+    <!-- Slot na przyciski akcji (widoczne przy hover) -->
     <div v-if="$slots.actions" class="card-actions">
       <slot name="actions" />
     </div>
     
     <router-link :to="linkTo" class="block group">
       <div class="card-container">
-        <!-- Image -->
+        <!-- Okładka kolekcji -->
         <div class="card-image">
           <template v-if="hasImage">
             <img
@@ -25,13 +40,13 @@
           </template>
           <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           
-          <!-- Badge (privacy or type) -->
+          <!-- Badge prywatności (Publiczna/Prywatna) -->
           <div v-if="badge" class="absolute top-3 left-3">
             <span :class="badgeClasses">{{ badge }}</span>
           </div>
         </div>
 
-      <!-- Content -->
+      <!-- Treść karty -->
       <div class="card-content">
         <h3 class="card-title">{{ data.name }}</h3>
         
@@ -39,7 +54,7 @@
           {{ data.description }}
         </p>
 
-        <!-- Stats -->
+        <!-- Statystyki (właściciel, elementy, polubienia, wyświetlenia, komentarze) -->
         <div v-if="showStats" class="card-stats">
           <div v-if="showOwner && data.owner" class="stat-item">
             <UserIcon class="w-4 h-4" />
@@ -73,6 +88,25 @@
 </template>
 
 <script>
+/**
+ * @module CollectionCard
+ * @description Uniwersalny komponent karty dla kolekcji, przedmiotów i kategorii
+ * 
+ * @prop {Object} data - Dane do wyświetlenia:
+ *   - name: Nazwa (wymagane)
+ *   - description: Opis
+ *   - coverImage/image: URL okładki
+ *   - privacy: 'public' | 'private'
+ *   - owner: { username } - właściciel
+ *   - itemsCount, likesCount, views, comments - statystyki
+ * @prop {'collection'|'item'|'category'} type - Typ karty (determinuje link)
+ * @prop {boolean} showStats - Czy pokazywać statystyki
+ * @prop {boolean} showOwner - Czy pokazywać właściciela
+ * @prop {boolean} hideBadge - Czy ukryć badge prywatności
+ * 
+ * @slots
+ * - actions: Przyciski akcji (widoczne przy hover)
+ */
 import { computed } from 'vue'
 import { 
   UserIcon, 
@@ -103,7 +137,7 @@ export default {
     },
     type: {
       type: String,
-      default: 'collection', // 'collection' | 'item' | 'category'
+      default: 'collection',
       validator: (value) => ['collection', 'item', 'category'].includes(value)
     },
     showStats: {
@@ -229,20 +263,11 @@ export default {
   @apply flex items-center gap-1;
 }
 
-/* Line clamp fallback */
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-clamp: 1;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-clamp: 2;
 }
 </style>

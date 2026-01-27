@@ -1,3 +1,25 @@
+/**
+ * @fileoverview Główny plik serwera Express
+ * @description Konfiguracja i uruchomienie serwera API.
+ * 
+ * @module server
+ * 
+ * @config
+ * 1. Bezpieczeństwo: helmet, CORS
+ * 2. Rate limiting: 500 req/15 min
+ * 3. Logowanie: morgan
+ * 4. Parsowanie: JSON (max 10kb)
+ * 5. Baza danych: MongoDB via mongoose
+ * 6. Routes: /api/v1/*
+ * 7. Static files: /uploads
+ * 8. Graceful shutdown: SIGINT, SIGTERM
+ * 
+ * @env
+ * - PORT - Port serwera (domyślnie 3000)
+ * - CORS_ORIGIN - Dozwolone originy (przecinek-separated)
+ * - NODE_ENV - production/development
+ */
+
 import express from "express";
 import cors from "cors";
 import path from "path";
@@ -95,6 +117,10 @@ const server = app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
     console.log(`Server running on port ${process.env.PORT || 3000}`);
 });
 
+/**
+ * Graceful shutdown handler
+ * Zamyka serwer i rozłącza bazę danych
+ */
 const shutdown = async () => {
     console.log("Closing server...");
     await server.close();

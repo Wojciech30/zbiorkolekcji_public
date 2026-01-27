@@ -1,3 +1,29 @@
+/**
+ * @fileoverview Routes przedmiotów
+ * @description Endpointy CRUD dla przedmiotów w kolekcjach,
+ * obsługa dynamicznych atrybutów, polubienia i komentarze.
+ * 
+ * @module routes/items
+ * 
+ * @routes
+ * GET    /                     - Lista przedmiotów (opcjonalne: collectionId)
+ * GET    /:id                  - Szczegóły przedmiotu
+ * POST   /                     - Utwórz przedmiot (z walidacją atrybutów kategorii)
+ * PUT    /:id                  - Aktualizuj przedmiot
+ * DELETE /:id                  - Usuń przedmiot
+ * GET    /:id/stats            - Statystyki przedmiotu
+ * POST   /:id/like             - Polub przedmiot
+ * DELETE /:id/like             - Cofnij polubienie
+ * POST   /:id/comments         - Dodaj komentarz
+ * DELETE /:id/comments/:commentId - Usuń komentarz
+ * 
+ * @helpers
+ * - loadCollectionWithCategory - Ładuje kolekcję z kategorią
+ * - canReadCollection - Sprawdza uprawnienia odczytu
+ * - canWriteCollection - Sprawdza uprawnienia zapisu
+ * - validateAndBuildAttributes - Waliduje atrybuty wg schematu kategorii
+ */
+
 import express from "express";
 import mongoose from "mongoose";
 import Item from "../models/Item.js";
@@ -8,6 +34,13 @@ import optionalAuthenticate from "../middleware/optionalAuthenticate.js";
 import validateObjectId from "../middleware/validateObjectId.js";
 
 const router = express.Router();
+
+/**
+ * Obsługa błędów z walidacją Mongoose
+ * @param {Object} res - Response object
+ * @param {Error} error - Błąd
+ * @param {string} defaultMessage - Domyślny komunikat
+ */
 
 const handleError = (res, error, defaultMessage) => {
   console.error(error);

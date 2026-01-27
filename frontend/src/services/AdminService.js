@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Serwis API panelu administratora
+ * @description Metody dla funkcji administracyjnych (tylko admin).
+ * 
+ * @module services/AdminService
+ */
+
 import apiClient from "./apiClient";
 
 export default {

@@ -1,3 +1,11 @@
+<!--
+  @component ImageUploader
+  @description Komponent do uploadowania obrazów z drag & drop, walidacją,
+  resize'em i progress barem. Używa v-model do dwukierunkowego bindowania URL-a.
+  
+  @example
+  <ImageUploader v-model="coverImage" :maxWidth="800" :maxHeight="600" />
+-->
 <template>
   <div
     class="image-uploader"
@@ -6,7 +14,7 @@
     @dragleave.prevent="onDragLeave"
     @drop.prevent="onDrop"
   >
-    <!-- Preview -->
+    <!-- Podgląd załadowanego obrazu -->
     <div v-if="previewUrl" class="preview-container">
       <img :src="displayUrl" alt="Preview" class="preview-image" />
       <button
@@ -20,7 +28,7 @@
       </button>
     </div>
 
-    <!-- Upload area -->
+    <!-- Obszar drag & drop / kliknięcia -->
     <div v-else class="upload-area" @click="triggerFileInput">
       <input
         ref="fileInput"
@@ -41,17 +49,33 @@
       </div>
     </div>
 
-    <!-- Progress bar -->
+    <!-- Pasek postępu uploadu -->
     <div v-if="isUploading" class="progress-bar">
       <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
     </div>
 
-    <!-- Error -->
+    <!-- Komunikat błędu -->
     <p v-if="error" class="text-red-500 text-sm mt-2">{{ error }}</p>
   </div>
 </template>
 
 <script>
+/**
+ * @module ImageUploader
+ * @description Komponent uploadera obrazów z funkcjami:
+ * - Drag & drop
+ * - Walidacja typu i rozmiaru (max 5MB)
+ * - Automatyczny resize przed uploadem
+ * - Progress bar podczas uploadu
+ * - Podgląd obrazu z możliwością usunięcia
+ * 
+ * @prop {string} modelValue - URL obrazu (v-model)
+ * @prop {number} maxWidth - Maksymalna szerokość po resize (default: 800)
+ * @prop {number} maxHeight - Maksymalna wysokość po resize (default: 800)
+ * 
+ * @emits update:modelValue - Nowy URL po uploadzie
+ * @emits uploaded - URL po pomyślnym uploadzie
+ */
 import { ref, watch, computed } from 'vue';
 import apiClient from '@/services/apiClient';
 import { resizeImageAsFile } from '@/utils/imageResize';
@@ -83,19 +107,20 @@ export default {
     const previewUrl = ref(props.modelValue || '');
     const error = ref('');
 
-    // Convert relative URLs to full backend URLs for display
+    // Konwertuj względne URL-e na pełne URL-e backendu
     const displayUrl = computed(() => getImageUrl(previewUrl.value));
 
+    // Synchronizuj z zewnętrzną wartością modelValue
     watch(() => props.modelValue, (newVal) => {
       if (newVal && newVal !== previewUrl.value) {
         previewUrl.value = newVal;
       }
     });
-
     const triggerFileInput = () => {
       fileInput.value?.click();
     };
 
+    // Obsługa drag & drop
     const onDragOver = () => {
       isDragging.value = true;
     };
@@ -112,6 +137,7 @@ export default {
       }
     };
 
+    /** Obsługa wyboru pliku przez input */
     const onFileSelect = (e) => {
       const files = e.target?.files;
       if (files && files.length > 0) {
@@ -119,30 +145,36 @@ export default {
       }
     };
 
+    /**
+     * Główna funkcja obsługi pliku
+     * - Waliduje typ i rozmiar
+     * - Pokazuje tymczasowy podgląd
+     * - Resize'uje i uploaduje na serwer
+     */
     const handleFile = async (file) => {
       error.value = '';
 
-      // Walidacja typu
+      // Walidacja typu pliku
       if (!file.type.startsWith('image/')) {
         error.value = 'Plik musi być obrazem';
         return;
       }
 
-      // Walidacja rozmiaru (5MB)
+      // Walidacja rozmiaru (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         error.value = 'Plik jest zbyt duży (max 5MB)';
         return;
       }
 
-      // Tymczasowy podgląd
+      // Tymczasowy podgląd (blob URL)
       previewUrl.value = URL.createObjectURL(file);
 
-      // Upload
+      // Upload na serwer
       try {
         isUploading.value = true;
         uploadProgress.value = 0;
 
-        // Resize image before upload
+        // Resize przed uploadem
         const resizedFile = await resizeImageAsFile(file, props.maxWidth, props.maxHeight);
 
         const formData = new FormData();
@@ -159,6 +191,7 @@ export default {
           }
         });
 
+        // Zapisz URL z serwera
         const imageUrl = response.data.url;
         previewUrl.value = imageUrl;
         emit('update:modelValue', imageUrl);
@@ -174,6 +207,7 @@ export default {
       }
     };
 
+    // Usuń wybrany obraz
     const removeImage = () => {
       previewUrl.value = '';
       emit('update:modelValue', '');
