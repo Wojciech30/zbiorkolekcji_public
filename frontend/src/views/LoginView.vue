@@ -46,7 +46,7 @@
             v-model="identifier"
             id="identifier"
             type="text"
-            class="border w-full p-2 rounded"
+            class="input-field"
             :class="{ 'border-red-500': errors.identifier }"
         />
         <p v-if="errors.identifier" class="text-red-500 text-sm">
@@ -61,7 +61,7 @@
               v-model="password"
               id="password"
               :type="showPassword ? 'text' : 'password'"
-              class="border w-full p-2 pr-10 rounded"
+              class="input-field pr-10"
               :class="{ 'border-red-500': errors.password }"
           />
           <button

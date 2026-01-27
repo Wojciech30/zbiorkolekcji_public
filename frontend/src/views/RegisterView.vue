@@ -17,7 +17,7 @@
             v-model="username"
             id="username"
             type="text"
-            class="border w-full p-2 rounded"
+            class="input-field"
             :class="{ 'border-red-500': errors.username }"
         />
         <p v-if="errors.username" class="text-red-500 text-sm">
@@ -31,7 +31,7 @@
             v-model="email"
             id="email"
             type="email"
-            class="border w-full p-2 rounded"
+            class="input-field"
             :class="{ 'border-red-500': errors.email }"
         />
         <p v-if="errors.email" class="text-red-500 text-sm">
@@ -45,7 +45,7 @@
             v-model="password"
             id="password"
             type="password"
-            class="border w-full p-2 rounded"
+            class="input-field"
             :class="{ 'border-red-500': errors.password }"
         />
         <p v-if="errors.password" class="text-red-500 text-sm">

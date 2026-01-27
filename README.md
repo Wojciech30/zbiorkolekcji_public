@@ -80,10 +80,10 @@ zbiorkolekcji/
 
 ## API Endpoints
 
-| Endpoint | Opis |
-|----------|------|
-| `POST /api/v1/auth/login` | Logowanie |
-| `POST /api/v1/auth/register` | Rejestracja |
-| `GET /api/v1/collections` | Lista kolekcji |
-| `GET /api/v1/categories` | Lista kategorii |
-| `GET /api/v1/admin/*` | Endpointy admina |
+| Endpoint                     | Opis             |
+| ---------------------------- | ---------------- |
+| `POST /api/v1/auth/login`    | Logowanie        |
+| `POST /api/v1/auth/register` | Rejestracja      |
+| `GET /api/v1/collections`    | Lista kolekcji   |
+| `GET /api/v1/categories`     | Lista kategorii  |
+| `GET /api/v1/admin/*`        | Endpointy admina |

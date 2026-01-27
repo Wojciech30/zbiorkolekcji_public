@@ -4,7 +4,7 @@
     <select
         v-model="selectedPrivacy"
         @change="updatePrivacy"
-        class="w-full p-2 border rounded"
+        class="input-field"
     >
       <option value="public">Publiczna</option>
       <option value="private">Prywatna</option>

@@ -371,7 +371,7 @@ export default {
 
     // Liked collections with pagination
     const likedCollections = ref([]);
-    const likedPagination = ref({ page: 1, limit: 6, total: 0, pages: 1 });
+    const likedPagination = ref({ page: 1, limit: 9, total: 0, pages: 1 });
 
     // Password modal
     const showPasswordModal = ref(false);

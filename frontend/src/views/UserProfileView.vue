@@ -162,7 +162,7 @@ export default {
     const user = ref(null)
     const stats = ref({ collections: 0, views: 0, likes: 0 })
     const collections = ref([])
-    const pagination = ref({ page: 1, limit: 6, total: 0, pages: 1 })
+    const pagination = ref({ page: 1, limit: 9, total: 0, pages: 1 })
     const isLoading = ref(true)
     const error = ref(null)
     const isPrivate = ref(false)

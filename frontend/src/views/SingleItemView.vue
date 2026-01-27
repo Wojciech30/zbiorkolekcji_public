@@ -183,7 +183,7 @@
               
               <transition-group name="list">
                 <div
-                  v-for="comment in comments"
+                  v-for="comment in paginatedComments"
                   :key="comment._id"
                   class="flex gap-4 group"
                 >
@@ -215,6 +215,27 @@
                   </div>
                 </div>
               </transition-group>
+
+              <!-- Comments Pagination -->
+              <div v-if="totalCommentsPages > 1" class="flex justify-center gap-2 mt-6 pt-4 border-t">
+                <button
+                  @click="commentsPage--"
+                  :disabled="commentsPage <= 1"
+                  class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Poprzednia
+                </button>
+                <span class="px-4 py-2 text-gray-600">
+                  {{ commentsPage }} / {{ totalCommentsPages }}
+                </span>
+                <button
+                  @click="commentsPage++"
+                  :disabled="commentsPage >= totalCommentsPages"
+                  class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Następna
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -272,6 +293,18 @@ export default {
     const isLiking = ref(false);
     const likesCount = ref(0);
     const hasLiked = ref(false);
+
+    // Comments pagination
+    const commentsPage = ref(1);
+    const commentsPerPage = 10;
+    const sortedComments = computed(() => {
+      return [...comments.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    });
+    const totalCommentsPages = computed(() => Math.ceil(sortedComments.value.length / commentsPerPage));
+    const paginatedComments = computed(() => {
+      const start = (commentsPage.value - 1) * commentsPerPage;
+      return sortedComments.value.slice(start, start + commentsPerPage);
+    });
 
     const isAuthenticated = computed(() => store.getters["auth/isAuthenticated"]);
     const currentUser = computed(() => store.state.auth.user);
@@ -477,7 +510,10 @@ export default {
       shareItem,
       addComment,
       deleteComment,
-      canDeleteComment
+      canDeleteComment,
+      commentsPage,
+      totalCommentsPages,
+      paginatedComments
     };
   }
 };

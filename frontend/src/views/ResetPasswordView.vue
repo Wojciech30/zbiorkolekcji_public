@@ -50,7 +50,7 @@
               v-model="form.newPassword"
               id="newPassword"
               type="password"
-              class="w-full p-2 border rounded"
+              class="input-field"
               :class="{ 'border-red-500': errors.newPassword }"
               placeholder="Wpisz nowe hasło"
           />
@@ -65,7 +65,7 @@
               v-model="form.confirmPassword"
               id="confirmPassword"
               type="password"
-              class="w-full p-2 border rounded"
+              class="input-field"
               :class="{ 'border-red-500': errors.confirmPassword }"
               placeholder="Powtórz nowe hasło"
           />

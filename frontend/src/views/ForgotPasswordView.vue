@@ -23,7 +23,7 @@
               v-model="email"
               id="email"
               type="email"
-              class="w-full p-2 border rounded"
+              class="input-field"
               :class="{ 'border-red-500': emailError }"
               placeholder="twoj@email.com"
           />

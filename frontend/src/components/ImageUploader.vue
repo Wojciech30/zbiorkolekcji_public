@@ -8,7 +8,7 @@
   >
     <!-- Preview -->
     <div v-if="previewUrl" class="preview-container">
-      <img :src="previewUrl" alt="Preview" class="preview-image" />
+      <img :src="displayUrl" alt="Preview" class="preview-image" />
       <button
         type="button"
         @click="removeImage"
@@ -52,9 +52,10 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import apiClient from '@/services/apiClient';
 import { resizeImageAsFile } from '@/utils/imageResize';
+import { getImageUrl } from '@/utils/imageUrl';
 
 export default {
   name: 'ImageUploader',
@@ -81,6 +82,9 @@ export default {
     const uploadProgress = ref(0);
     const previewUrl = ref(props.modelValue || '');
     const error = ref('');
+
+    // Convert relative URLs to full backend URLs for display
+    const displayUrl = computed(() => getImageUrl(previewUrl.value));
 
     watch(() => props.modelValue, (newVal) => {
       if (newVal && newVal !== previewUrl.value) {
@@ -184,6 +188,7 @@ export default {
       isUploading,
       uploadProgress,
       previewUrl,
+      displayUrl,
       error,
       triggerFileInput,
       onDragOver,

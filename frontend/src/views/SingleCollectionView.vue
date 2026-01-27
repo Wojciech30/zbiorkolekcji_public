@@ -162,55 +162,106 @@
 
     <!-- Comments Section -->
     <section v-if="collection" class="mb-8">
-      <h2 class="text-2xl font-semibold mb-4">
-        Komentarze 
-        <span class="text-gray-500 text-lg">({{ collectionComments.length }})</span>
-      </h2>
+      <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <ChatBubbleLeftRightIcon class="w-6 h-6 text-purple-500" />
+          Komentarze <span class="text-gray-400 font-normal">({{ collectionComments.length }})</span>
+        </h2>
 
-      <!-- Add comment -->
-      <div v-if="isAuthenticated" class="mb-6">
-        <textarea
-          v-model="newCollectionComment"
-          placeholder="Napisz komentarz do kolekcji..."
-          class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
-          rows="3"
-        ></textarea>
-        <button
-          @click="addCollectionComment"
-          :disabled="!newCollectionComment.trim() || isAddingCollectionComment"
-          class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          {{ isAddingCollectionComment ? 'Dodawanie...' : 'Dodaj komentarz' }}
-        </button>
-      </div>
-      <p v-else class="text-sm text-gray-500 mb-4">
-        Zaloguj się, aby dodać komentarz
-      </p>
-
-      <!-- Comments list -->
-      <div v-if="collectionComments.length === 0" class="text-gray-500">
-        Brak komentarzy
-      </div>
-      <div v-else class="space-y-4">
-        <div
-          v-for="comment in collectionComments"
-          :key="comment._id"
-          class="p-4 bg-gray-50 rounded-lg"
-        >
-          <div class="flex justify-between items-start">
-            <div>
-              <p class="font-semibold text-gray-800">{{ comment.user?.username || 'Anonim' }}</p>
-              <p class="text-xs text-gray-500">{{ formatCommentDate(comment.createdAt) }}</p>
+        <!-- Add comment -->
+        <div v-if="isAuthenticated" class="mb-8 flex gap-4">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
+              {{ userInitials }}
             </div>
-            <button
-              v-if="canDeleteCollectionComment(comment)"
-              @click="deleteCollectionComment(comment._id)"
-              class="text-red-500 hover:text-red-700 text-sm"
+          </div>
+          <div class="flex-grow">
+            <div class="relative">
+              <textarea
+                v-model="newCollectionComment"
+                placeholder="Podziel się swoją opinią..."
+                class="w-full p-4 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow min-h-[100px]"
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="flex justify-end mt-2">
+              <button
+                @click="addCollectionComment"
+                :disabled="!newCollectionComment.trim() || isAddingCollectionComment"
+                class="btn-primary"
+              >
+                {{ isAddingCollectionComment ? 'Dodawanie...' : 'Opublikuj komentarz' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="mb-8 p-6 bg-blue-50 rounded-xl text-center">
+          <p class="text-blue-800">
+            <router-link :to="{ name: 'Login', query: { redirect: route.fullPath } }" class="font-bold underline hover:text-blue-900">Zaloguj się</router-link>, aby dodać komentarz.
+          </p>
+        </div>
+
+        <!-- Comments list -->
+        <div class="space-y-6">
+          <div v-if="collectionComments.length === 0" class="text-center py-8 text-gray-400 italic">
+            Brak komentarzy. Bądź pierwszy!
+          </div>
+          
+          <transition-group name="list">
+            <div
+              v-for="comment in paginatedCollectionComments"
+              :key="comment._id"
+              class="flex gap-4 group"
             >
-              Usuń
+              <div class="flex-shrink-0">
+                <div v-if="comment.user?.avatar" class="w-10 h-10 rounded-full overflow-hidden">
+                  <img :src="getImageUrl(comment.user.avatar)" class="w-full h-full object-cover" />
+                </div>
+                <div v-else class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold">
+                  {{ comment.user?.username?.substring(0,2)?.toUpperCase() || '?' }}
+                </div>
+              </div>
+              
+              <div class="flex-grow bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <span class="font-bold text-gray-900 mr-2">{{ comment.user?.username || 'Anonim' }}</span>
+                    <span class="text-xs text-gray-500">{{ formatDate(comment.createdAt) }}</span>
+                  </div>
+                  <button
+                    v-if="canDeleteCollectionComment(comment)"
+                    @click="deleteCollectionComment(comment._id)"
+                    class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    title="Usuń komentarz"
+                  >
+                    <TrashIcon class="w-4 h-4" />
+                  </button>
+                </div>
+                <p class="text-gray-700 whitespace-pre-line text-sm sm:text-base leading-relaxed">{{ comment.text }}</p>
+              </div>
+            </div>
+          </transition-group>
+
+          <!-- Comments Pagination -->
+          <div v-if="totalCommentsPages > 1" class="flex justify-center gap-2 mt-6 pt-4 border-t">
+            <button
+              @click="commentsPage--"
+              :disabled="commentsPage <= 1"
+              class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Poprzednia
+            </button>
+            <span class="px-4 py-2 text-gray-600">
+              {{ commentsPage }} / {{ totalCommentsPages }}
+            </span>
+            <button
+              @click="commentsPage++"
+              :disabled="commentsPage >= totalCommentsPages"
+              class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Następna
             </button>
           </div>
-          <p class="mt-2 text-gray-700">{{ comment.text }}</p>
         </div>
       </div>
     </section>
@@ -403,7 +454,6 @@
                 v-model="newAllowedUser"
                 type="text"
                 class="input-field"
-                placeholder="np. jan_kowalski"
                 @keyup.enter="addAllowedUser"
               />
               <button
@@ -459,15 +509,16 @@ import { useToast } from "vue-toastification";
 import store from "@/store";
 import CollectionService from "@/services/CollectionService";
 import ItemService from "@/services/ItemService";
-import { PencilIcon, TrashIcon, FolderIcon, EyeIcon, HeartIcon, LockClosedIcon, PlusIcon, ShareIcon } from "@heroicons/vue/24/outline";
+import { PencilIcon, TrashIcon, FolderIcon, EyeIcon, HeartIcon, LockClosedIcon, PlusIcon, ShareIcon, ChatBubbleLeftRightIcon } from "@heroicons/vue/24/outline";
 import ImageUploader from "@/components/ImageUploader.vue";
 import ItemCard from "@/components/ItemCard.vue";
 import BaseModal from "@/components/BaseModal.vue";
 import { getImageUrl } from "@/utils/imageUrl";
+import { formatDate } from "@/utils/dateUtils";
 
 export default {
   name: "SingleCollectionView",
-  components: { PencilIcon, TrashIcon, FolderIcon, EyeIcon, HeartIcon, LockClosedIcon, PlusIcon, ShareIcon, ImageUploader, ItemCard, BaseModal },
+  components: { PencilIcon, TrashIcon, FolderIcon, EyeIcon, HeartIcon, LockClosedIcon, PlusIcon, ShareIcon, ChatBubbleLeftRightIcon, ImageUploader, ItemCard, BaseModal },
 
   setup() {
     const route = useRoute();
@@ -505,8 +556,24 @@ export default {
     const hasLikedCollection = ref(false);
     const collectionLikesCount = ref(0);
 
+    // Comments pagination
+    const commentsPage = ref(1);
+    const commentsPerPage = 10;
+    const sortedCollectionComments = computed(() => {
+      return [...collectionComments.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    });
+    const totalCommentsPages = computed(() => Math.ceil(sortedCollectionComments.value.length / commentsPerPage));
+    const paginatedCollectionComments = computed(() => {
+      const start = (commentsPage.value - 1) * commentsPerPage;
+      return sortedCollectionComments.value.slice(start, start + commentsPerPage);
+    });
+
     const loggedUser = computed(() => store.state.auth.user);
     const userId = computed(() => loggedUser.value?._id || loggedUser.value?.id);
+    const userInitials = computed(() => {
+      if (!loggedUser.value?.username) return '?';
+      return loggedUser.value.username.slice(0, 2).toUpperCase();
+    });
 
     const allowedUsersList = ref([]);
     const newAllowedUser = ref("");
@@ -805,17 +872,7 @@ export default {
       }
     };
 
-    const formatCommentDate = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleString('pl-PL', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    };
+    // formatDate imported from dateUtils
 
     const loadCollectionComments = async () => {
       try {
@@ -843,6 +900,8 @@ export default {
     };
 
     const deleteCollectionComment = async (commentId) => {
+      if (!confirm("Czy na pewno chcesz usunąć ten komentarz?")) return;
+      
       try {
         await CollectionService.deleteComment(route.params.id, commentId);
         collectionComments.value = collectionComments.value.filter(c => c._id !== commentId);
@@ -969,7 +1028,13 @@ export default {
       addCollectionComment,
       deleteCollectionComment,
       canDeleteCollectionComment,
-      formatCommentDate
+      formatDate,
+      userInitials,
+      route,
+      // Comments pagination
+      commentsPage,
+      totalCommentsPages,
+      paginatedCollectionComments
     };
   }
 };
@@ -989,6 +1054,7 @@ export default {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
