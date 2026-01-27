@@ -161,17 +161,18 @@ const validateAndBuildAttributes = (category, incomingAttributes, { mode, existi
     }
 
     const providedType = incoming.type;
-    if (providedType && providedType !== def.type) {
+    const normalizedDefType = normalizeType(def.type);
+    if (providedType && normalizeType(providedType) !== normalizedDefType) {
       errors.push(`Nieprawidłowy typ dla atrybutu '${key}'. Oczekiwano ${def.type}, otrzymano ${providedType}.`);
     }
 
-    const { ok, value, error } = castAndValidateValue(def, incoming.value);
+    const { ok, value, error } = castAndValidateValue({ ...def, type: normalizedDefType }, incoming.value);
     if (!ok) {
       errors.push(`Atrybut '${key}': ${error}`);
       continue;
     }
 
-    result[key] = { type: def.type, value };
+    result[key] = { type: normalizedDefType, value };
   }
 
   for (const key of Object.keys(normalizedIncoming)) {
@@ -586,8 +587,8 @@ router.delete("/:id/comments/:commentId", validateObjectId, authenticateToken, a
         message: "Nie masz uprawnień do usunięcia tego komentarza"
       });
     }
-
-    comment.deleteOne();
+    // Use pull() to remove subdocument from array (Mongoose 6+ compatible)
+    item.comments.pull(req.params.commentId);
     await item.save();
 
     res.json({

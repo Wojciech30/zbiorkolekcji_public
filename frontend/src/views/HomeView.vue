@@ -9,19 +9,6 @@
         <p class="hero-subtitle">
           Twórz, zarządzaj i dziel się swoimi kolekcjami ze światem
         </p>
-        
-        <!-- Hero CTA -->
-        <div class="hero-actions">
-          <router-link to="/collections" class="btn-hero-primary">
-            Przeglądaj kolekcje
-          </router-link>
-          <router-link v-if="!isAuthenticated" to="/register" class="btn-hero-secondary">
-            Dołącz za darmo
-          </router-link>
-          <router-link v-else to="/my-collections" class="btn-hero-secondary">
-            Moje kolekcje
-          </router-link>
-        </div>
 
         <!-- Stats Banner -->
         <div v-if="stats" class="stats-banner">
@@ -85,7 +72,7 @@
               <FolderIcon class="w-8 h-8" />
             </div>
             <h3 class="category-name">{{ category.name }}</h3>
-            <p class="category-description">{{ category.description || 'Brak opisu' }}</p>
+            <p class="category-description">{{ getCategorySubtitle(category) }}</p>
           </router-link>
         </div>
       </section>
@@ -115,13 +102,8 @@
             type="collection"
             :showStats="true"
             :showOwner="true"
+            :hideBadge="true"
           />
-        </div>
-
-        <div v-if="popularCollections.length > 0" class="section-cta">
-          <router-link to="/collections" class="btn-outline">
-            Zobacz wszystkie kolekcje
-          </router-link>
         </div>
       </section>
     </div>
@@ -129,7 +111,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from 'vuex'
 import { MagnifyingGlassIcon, FolderIcon, ArchiveBoxIcon } from '@heroicons/vue/24/outline'
 import CategoryService from '@/services/CategoryService'
@@ -152,14 +134,27 @@ export default {
     const categories = ref([])
     const popularCollections = ref([])
     const searchQuery = ref('')
+    const debouncedSearchQuery = ref('')
     const isLoadingCategories = ref(true)
     const isLoadingPopular = ref(true)
     const stats = ref(null)
 
     const isAuthenticated = computed(() => store.getters['auth/isAuthenticated'])
 
+    // Debounce search query (300ms delay, minimum 3 characters)
+    let debounceTimeout = null
+    watch(searchQuery, (newValue) => {
+      if (debounceTimeout) clearTimeout(debounceTimeout)
+      debounceTimeout = setTimeout(() => {
+        // Only search if empty or at least 3 characters
+        if (newValue.trim().length === 0 || newValue.trim().length >= 3) {
+          debouncedSearchQuery.value = newValue
+        }
+      }, 300)
+    })
+
     const filteredCategories = computed(() => {
-      const query = searchQuery.value.trim().toLowerCase()
+      const query = debouncedSearchQuery.value.trim().toLowerCase()
       if (!query) return categories.value
       return categories.value.filter(category =>
         category.name.toLowerCase().includes(query)
@@ -192,14 +187,16 @@ export default {
 
     const loadStats = async () => {
       try {
-        // Try to get stats from collections response or calculate
+        const response = await CollectionService.getGlobalStats()
+        const data = response.data.stats
         stats.value = {
-          collections: popularCollections.value.length > 0 ? '100+' : '0',
-          items: '1000+',
-          users: '50+'
+          collections: data.collections || 0,
+          items: data.items || 0,
+          users: data.users || 0
         }
       } catch (error) {
         console.error('Błąd pobierania statystyk:', error)
+        stats.value = { collections: 0, items: 0, users: 0 }
       }
     }
 
@@ -207,6 +204,15 @@ export default {
       await Promise.all([loadCategories(), loadPopularCollections()])
       await loadStats()
     })
+
+    const getCategorySubtitle = (category) => {
+      if (category.description) return category.description
+      const count = category.publicCollectionsCount || 0
+      if (count === 0) return 'Brak kolekcji'
+      if (count === 1) return '1 kolekcja'
+      if (count >= 2 && count <= 4) return `${count} kolekcje`
+      return `${count} kolekcji`
+    }
 
     return {
       categories,
@@ -216,7 +222,8 @@ export default {
       isLoadingPopular,
       filteredCategories,
       isAuthenticated,
-      stats
+      stats,
+      getCategorySubtitle
     }
   }
 }
@@ -330,7 +337,7 @@ export default {
 
 /* Categories Grid */
 .categories-grid {
-  @apply grid grid-cols-2 md:grid-cols-4 gap-4;
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
 }
 
 .category-card {

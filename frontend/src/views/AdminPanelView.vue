@@ -148,29 +148,14 @@
       <section class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-2xl font-semibold mb-4 text-gray-700">Wszystkie kolekcje (tylko odczyt)</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <router-link
+          <CollectionCard
               v-for="collection in collections"
               :key="collection._id"
-              :to="{ name: 'SingleCollection', params: { id: collection._id } }"
-              class="block p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer"
-          >
-            <div class="flex justify-between items-start mb-2">
-              <h3 class="font-bold text-lg">{{ collection.name }}</h3>
-              <span 
-                  :class="collection.privacy === 'public' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
-                  class="px-2 py-1 rounded-full text-xs font-medium"
-              >
-                {{ collection.privacy === 'public' ? 'Publiczna' : 'Prywatna' }}
-              </span>
-            </div>
-            <p class="text-sm text-gray-600 mb-2">{{ collection.description || "Brak opisu" }}</p>
-            <div class="text-xs text-gray-500 space-y-1">
-              <p>Kategoria: {{ collection.category?.name || "Nieprzypisane" }}</p>
-              <p>Właściciel: {{ collection.owner?.username || "Nieznany" }}</p>
-              <p>Przedmioty: {{ collection.itemsCount || 0 }}</p>
-              <p>Wyświetlenia: {{ collection.views || 0 }}</p>
-            </div>
-          </router-link>
+              :data="collection"
+              type="collection"
+              :showStats="true"
+              :showOwner="true"
+          />
         </div>
 
         <!-- Paginacja kolekcji -->
@@ -194,15 +179,21 @@
       </section>
 
       <!-- Modal potwierdzenia blokady użytkownika -->
-      <div v-if="isBlockConfirmModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-          <h3 class="text-xl font-semibold text-gray-800 mb-4">Potwierdź blokadę użytkownika</h3>
+      <BaseModal
+        :show="isBlockConfirmModalOpen"
+        title="Potwierdź blokadę użytkownika"
+        @close="closeBlockConfirmModal"
+      >
+        <div>
           <p class="text-gray-600 mb-2">
             Czy na pewno chcesz zablokować użytkownika <strong>{{ userToBlock?.username }}</strong>?
           </p>
           <p class="text-red-600 text-sm mb-6">
             ⚠️ Ta operacja jest nieodwracalna. Wszystkie kolekcje i przedmioty użytkownika zostaną trwale usunięte.
           </p>
+        </div>
+
+        <template #footer>
           <div class="flex justify-end gap-3">
             <button
                 @click="closeBlockConfirmModal"
@@ -220,227 +211,227 @@
               <Spinner v-else class="w-5 h-5 mx-auto" />
             </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </BaseModal>
 
       <!-- Modal dodawania kategorii -->
-      <div v-if="isAddModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
-          <div class="p-6 border-b border-gray-200 flex-shrink-0">
-            <h3 class="text-2xl font-semibold">Nowa kategoria</h3>
-          </div>
-          <form @submit.prevent="addCategory" class="flex-1 flex flex-col overflow-hidden">
-            <div class="flex-1 min-h-0 overflow-y-auto p-6">
-              <div class="space-y-4">
-                <!-- Nazwa i opis -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
-                  <input
-                      v-model="newCategoryData.name"
-                      type="text"
-                      required
-                      class="input-field"
-                      :disabled="isProcessing"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                  <textarea
-                      v-model="newCategoryData.description"
-                      class="input-field h-24"
-                      :disabled="isProcessing"
-                  ></textarea>
-                </div>
-                <!-- Atrybuty -->
-                <div>
-                  <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
-                  <div
-                      v-for="(attr, index) in newCategoryData.attributes"
-                      :key="index"
-                      class="bg-gray-50 p-4 rounded-lg mb-3 space-y-3"
-                  >
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
-                        <input
-                            v-model="attr.name"
-                            type="text"
-                            required
-                            class="input-field"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm text-gray-600 mb-1">Typ *</label>
-                        <select v-model="attr.type" class="input-field" required>
-                          <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
-                            {{ type.label }}
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
+      <BaseModal
+        :show="isAddModalOpen"
+        title="Nowa kategoria"
+        @close="closeAddModal"
+      >
+        <form @submit.prevent="addCategory" class="flex-1 flex flex-col overflow-hidden">
+          <div class="flex-1 min-h-0 overflow-y-auto p-1">
+            <div class="space-y-4">
+              <!-- Nazwa i opis -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
+                <input
+                    v-model="newCategoryData.name"
+                    type="text"
+                    required
+                    class="input-field"
+                    :disabled="isProcessing"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                <textarea
+                    v-model="newCategoryData.description"
+                    class="input-field h-24"
+                    :disabled="isProcessing"
+                ></textarea>
+              </div>
+              <!-- Atrybuty -->
+              <div>
+                <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
+                <div
+                    v-for="(attr, index) in newCategoryData.attributes"
+                    :key="index"
+                    class="bg-gray-50 p-4 rounded-lg mb-3 space-y-3"
+                >
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
                       <input
-                          type="checkbox"
-                          v-model="attr.required"
-                          :id="`attr-required-${index}`"
-                          class="checkbox"
-                      />
-                      <label :for="`attr-required-${index}`" class="text-sm text-gray-600">
-                        Wymagany atrybut
-                      </label>
-                    </div>
-                    <!-- Dla typu select -->
-                    <div v-if="attr.type === 'select'" class="space-y-2">
-                      <label class="block text-sm text-gray-600">
-                        Opcje (oddziel przecinkami) *
-                      </label>
-                      <input
-                          v-model="attr.optionsInput"
+                          v-model="attr.name"
                           type="text"
                           required
                           class="input-field"
-                          @change="updateAddOptions(index, $event.target.value)"
                       />
                     </div>
-                    <!-- Przycisk zmiany kolejności -->
-                    <div class="flex gap-2">
-                      <button type="button" @click="moveAddAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">
-                        ↑
-                      </button>
-                      <button type="button" @click="moveAddAttributeDown(index)" class="text-gray-500 hover:text-gray-700 text-sm">
-                        ↓
-                      </button>
+                    <div>
+                      <label class="block text-sm text-gray-600 mb-1">Typ *</label>
+                      <select v-model="attr.type" class="input-field" required>
+                        <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
+                          {{ type.label }}
+                        </option>
+                      </select>
                     </div>
-                    <button type="button" @click="removeAddAttribute(index)" class="text-red-500 text-sm hover:text-red-700">
-                      Usuń atrybut
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        v-model="attr.required"
+                        :id="`attr-required-${index}`"
+                        class="checkbox"
+                    />
+                    <label :for="`attr-required-${index}`" class="text-sm text-gray-600">
+                      Wymagany atrybut
+                    </label>
+                  </div>
+                  <!-- Dla typu select -->
+                  <div v-if="attr.type === 'select'" class="space-y-2">
+                    <label class="block text-sm text-gray-600">
+                      Opcje (oddziel przecinkami) *
+                    </label>
+                    <input
+                        v-model="attr.optionsInput"
+                        type="text"
+                        required
+                        class="input-field"
+                        @change="updateAddOptions(index, $event.target.value)"
+                    />
+                  </div>
+                  <!-- Przycisk zmiany kolejności -->
+                  <div class="flex gap-2">
+                    <button type="button" @click="moveAddAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">
+                      ↑
+                    </button>
+                    <button type="button" @click="moveAddAttributeDown(index)" class="text-gray-500 hover:text-gray-700 text-sm">
+                      ↓
                     </button>
                   </div>
-                  <button type="button" @click="addNewAttribute" class="btn-secondary mt-2">
-                    + Dodaj atrybut
+                  <button type="button" @click="removeAddAttribute(index)" class="text-red-500 text-sm hover:text-red-700">
+                    Usuń atrybut
                   </button>
                 </div>
-              </div>
-            </div>
-            <div class="p-6 border-t border-gray-200 flex-shrink-0">
-              <div class="flex justify-end gap-3">
-                <button
-                    type="button"
-                    @click="closeAddModal"
-                    class="btn-gray"
-                    :disabled="isProcessing"
-                >
-                  Anuluj
-                </button>
-                <button type="submit" class="btn-primary" :disabled="isProcessing">
-                  <span v-if="!isProcessing">Utwórz kategorię</span>
-                  <Spinner v-else class="w-5 h-5 mx-auto" />
+                <button type="button" @click="addNewAttribute" class="btn-secondary mt-2">
+                  + Dodaj atrybut
                 </button>
               </div>
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
+        </form>
+        
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <button
+                type="button"
+                @click="closeAddModal"
+                class="btn-gray"
+                :disabled="isProcessing"
+            >
+              Anuluj
+            </button>
+            <button @click="addCategory" class="btn-primary" :disabled="isProcessing">
+              <span v-if="!isProcessing">Utwórz kategorię</span>
+              <Spinner v-else class="w-5 h-5 mx-auto" />
+            </button>
+          </div>
+        </template>
+      </BaseModal>
 
       <!-- Modal edycji kategorii -->
-      <div v-if="isEditModalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
-          <div class="p-6 border-b border-gray-200 flex-shrink-0">
-            <h3 class="text-2xl font-semibold">Edytuj kategorię</h3>
-          </div>
-          <form @submit.prevent="saveEditedCategory" class="flex-1 flex flex-col overflow-hidden">
-            <div class="flex-1 min-h-0 overflow-y-auto p-6">
-              <div class="space-y-4">
-                <!-- Nazwa i opis -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
-                  <input
-                      v-model="editedCategory.name"
-                      type="text"
-                      required
-                      class="input-field"
-                      :disabled="isProcessing"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
-                  <textarea
-                      v-model="editedCategory.description"
-                      class="input-field h-24"
-                      :disabled="isProcessing"
-                  ></textarea>
-                </div>
-                <!-- Atrybuty -->
-                <div>
-                  <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
-                  <div
-                      v-for="(attr, index) in editedCategory.attributes"
-                      :key="index"
-                      class="bg-gray-50 p-4 rounded-lg mb-3 space-y-3"
-                  >
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
-                        <input v-model="attr.name" type="text" required class="input-field" />
-                      </div>
-                      <div>
-                        <label class="block text-sm text-gray-600 mb-1">Typ *</label>
-                        <select v-model="attr.type" class="input-field" required>
-                          <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
-                            {{ type.label }}
-                          </option>
-                        </select>
-                      </div>
+      <BaseModal
+        :show="isEditModalOpen"
+        title="Edytuj kategorię"
+        @close="closeEditModal"
+      >
+        <form @submit.prevent="saveEditedCategory" class="flex-1 flex flex-col overflow-hidden">
+          <div class="flex-1 min-h-0 overflow-y-auto p-1">
+            <div class="space-y-4">
+              <!-- Nazwa i opis -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
+                <input
+                    v-model="editedCategory.name"
+                    type="text"
+                    required
+                    class="input-field"
+                    :disabled="isProcessing"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                <textarea
+                    v-model="editedCategory.description"
+                    class="input-field h-24"
+                    :disabled="isProcessing"
+                ></textarea>
+              </div>
+              <!-- Atrybuty -->
+              <div>
+                <h3 class="text-lg font-medium text-gray-700 mb-2">Atrybuty</h3>
+                <div
+                    v-for="(attr, index) in editedCategory.attributes"
+                    :key="index"
+                    class="bg-gray-50 p-4 rounded-lg mb-3 space-y-3"
+                >
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
+                      <input v-model="attr.name" type="text" required class="input-field" />
                     </div>
-                    <div class="flex items-center gap-2">
-                      <input
-                          type="checkbox"
-                          v-model="attr.required"
-                          :id="`edit-attr-required-${index}`"
-                          class="checkbox"
-                      />
-                      <label :for="`edit-attr-required-${index}`" class="text-sm text-gray-600">
-                        Wymagany atrybut
-                      </label>
+                    <div>
+                      <label class="block text-sm text-gray-600 mb-1">Typ *</label>
+                      <select v-model="attr.type" class="input-field" required>
+                        <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
+                          {{ type.label }}
+                        </option>
+                      </select>
                     </div>
-                    <div v-if="attr.type === 'select'" class="space-y-2">
-                      <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami) *</label>
-                      <input
-                          v-model="attr.optionsInput"
-                          type="text"
-                          required
-                          class="input-field"
-                          @change="updateEditOptions(index, $event.target.value)"
-                      />
-                    </div>
-                    <!-- Przycisk zmiany kolejności -->
-                    <div class="flex gap-2">
-                      <button type="button" @click="moveEditAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">↑</button>
-                      <button type="button" @click="moveEditAttributeDown(index)" class="text-gray-500 hover:text-gray-700 text-sm">↓</button>
-                    </div>
-                    <button type="button" @click="removeEditAttribute(index)" class="text-red-500 text-sm hover:text-red-700">
-                      Usuń atrybut
-                    </button>
                   </div>
-                  <button type="button" @click="addEditAttribute" class="btn-secondary mt-2">
-                    + Dodaj atrybut
+                  <div class="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        v-model="attr.required"
+                        :id="`edit-attr-required-${index}`"
+                        class="checkbox"
+                    />
+                    <label :for="`edit-attr-required-${index}`" class="text-sm text-gray-600">
+                      Wymagany atrybut
+                    </label>
+                  </div>
+                  <div v-if="attr.type === 'select'" class="space-y-2">
+                    <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami) *</label>
+                    <input
+                        v-model="attr.optionsInput"
+                        type="text"
+                        required
+                        class="input-field"
+                        @change="updateEditOptions(index, $event.target.value)"
+                    />
+                  </div>
+                  <!-- Przycisk zmiany kolejności -->
+                  <div class="flex gap-2">
+                    <button type="button" @click="moveEditAttributeUp(index)" class="text-gray-500 hover:text-gray-700 text-sm">↑</button>
+                    <button type="button" @click="moveEditAttributeDown(index)" class="text-gray-500 hover:text-gray-700 text-sm">↓</button>
+                  </div>
+                  <button type="button" @click="removeEditAttribute(index)" class="text-red-500 text-sm hover:text-red-700">
+                    Usuń atrybut
                   </button>
                 </div>
-              </div>
-            </div>
-            <div class="p-6 border-t border-gray-200 flex-shrink-0">
-              <div class="flex justify-end gap-3">
-                <button type="button" @click="closeEditModal" class="btn-gray" :disabled="isProcessing">
-                  Anuluj
-                </button>
-                <button type="submit" class="btn-primary" :disabled="isProcessing">
-                  <span v-if="!isProcessing">Zapisz zmiany</span>
-                  <Spinner v-else class="w-5 h-5 mx-auto" />
+                <button type="button" @click="addEditAttribute" class="btn-secondary mt-2">
+                  + Dodaj atrybut
                 </button>
               </div>
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
+        </form>
+        
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <button type="button" @click="closeEditModal" class="btn-gray" :disabled="isProcessing">
+              Anuluj
+            </button>
+            <button @click="saveEditedCategory" class="btn-primary" :disabled="isProcessing">
+              <span v-if="!isProcessing">Zapisz zmiany</span>
+              <Spinner v-else class="w-5 h-5 mx-auto" />
+            </button>
+          </div>
+        </template>
+      </BaseModal>
     </div>
   </div>
 </template>
@@ -453,13 +444,18 @@ import { useToast } from 'vue-toastification'
 import CategoryService from '@/services/CategoryService'
 import AdminService from '@/services/AdminService'
 import Spinner from '@/components/AppSpinner.vue'
+import CollectionCard from '@/components/CollectionCard.vue'
+import BaseModal from '@/components/BaseModal.vue'
+import { formatDateTime } from '@/utils/dateUtils'
 import { PlusIcon } from '@heroicons/vue/24/outline'
 
 export default {
   name: 'AdminPanelView',
   components: {
     Spinner,
-    PlusIcon
+    PlusIcon,
+    CollectionCard,
+    BaseModal
   },
   setup() {
     const router = useRouter()
@@ -504,17 +500,11 @@ export default {
     const isEditModalOpen = ref(false)
     const editedCategory = ref(null)
 
+    // formatDate uses shared formatDateTime from dateUtils
     const formatDate = (dateString) => {
-      if (!dateString) return 'Nigdy'
-      const date = new Date(dateString)
-      return date.toLocaleString('pl-PL', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
+      if (!dateString) return 'Nigdy';
+      return formatDateTime(dateString);
+    };
 
     const loadData = async () => {
       try {

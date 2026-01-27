@@ -72,6 +72,10 @@ export default {
         return apiClient.delete(`/collections/${collectionId}/allowed-users/${userId}`);
     },
 
+    getGlobalStats() {
+        return apiClient.get("/collections/special/stats");
+    },
+
     getPopularCollections() {
         return apiClient.get("/collections/special/popular");
     },
@@ -103,5 +107,9 @@ export default {
         return apiClient.delete(
             `/collections/${collectionId}/comments/${commentId}`
         );
+    },
+
+    getLikedCollections({ page = 1, limit = 6 } = {}) {
+        return apiClient.get("/collections/me/liked", { params: { page, limit } });
     }
 };

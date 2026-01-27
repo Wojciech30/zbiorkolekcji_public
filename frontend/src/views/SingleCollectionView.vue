@@ -1,418 +1,399 @@
 <template>
   <div class="container mx-auto p-4">
-    <header v-if="collection" class="mb-8">
+    <!-- Header: Title + Meta info -->
+    <header v-if="collection" class="mb-8 text-center">
       <h1 class="text-4xl font-bold text-gray-800">{{ collection.name }}</h1>
-      <p class="text-gray-600 mt-2">{{ collection.description }}</p>
+      
+      <!-- Meta row: Category, Owner, Like -->
+      <div class="flex flex-wrap items-center justify-center gap-4 mt-4 text-sm">
+        <!-- Category -->
+        <div v-if="collection.category" class="flex items-center gap-2 text-gray-600">
+          <FolderIcon class="w-4 h-4" />
+          <router-link
+            :to="`/categories/${collection.category.id || collection.category._id}/collections`"
+            class="text-blue-600 hover:underline"
+          >
+            {{ collection.category.name || "Nieznana kategoria" }}
+          </router-link>
+        </div>
 
-      <p
-        v-if="collection && collection.category"
-        class="text-sm text-gray-500 mt-2"
-      >
-        Kategoria:
-        <router-link
-          :to="`/categories/${collection.category.id || collection.category._id}/collections`"
-          class="text-blue-500 hover:underline"
-        >
-          {{ collection.category.name || "Nieznana kategoria" }}
-        </router-link>
-      </p>
-
-      <!-- Właściciel kolekcji -->
-      <div v-if="collection.owner" class="flex items-center gap-3 mt-4">
-        <router-link 
-          :to="`/users/${collection.owner._id || collection.owner.id}`"
-          class="flex items-center gap-3 group hover:bg-gray-50 rounded-lg p-2 -ml-2 transition-colors"
-        >
-          <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-            <img 
-              v-if="collection.owner.avatar" 
-              :src="getImageUrl(collection.owner.avatar)" 
-              :alt="collection.owner.username"
-              class="w-full h-full object-cover"
-              @error="$event.target.style.display='none'"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center bg-blue-500 text-white font-bold">
-              {{ collection.owner.username?.charAt(0).toUpperCase() }}
+        <!-- Owner -->
+        <div v-if="collection.owner" class="flex items-center gap-2">
+          <router-link 
+            :to="`/users/${collection.owner._id || collection.owner.id}`"
+            class="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+          >
+            <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+              <img 
+                v-if="collection.owner.avatar" 
+                :src="getImageUrl(collection.owner.avatar)" 
+                :alt="collection.owner.username"
+                class="w-full h-full object-cover"
+                @error="$event.target.style.display='none'"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold">
+                {{ collection.owner.username?.charAt(0).toUpperCase() }}
+              </div>
             </div>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500">Właściciel</p>
-            <p class="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
-              {{ collection.owner.username }}
-            </p>
-          </div>
-        </router-link>
-      </div>
+            <span>{{ collection.owner.username }}</span>
+          </router-link>
+        </div>
 
-      <div class="mt-4 flex gap-2">
+        <!-- Views -->
+        <div class="flex items-center gap-1 text-gray-500">
+          <EyeIcon class="w-4 h-4" />
+          <span>{{ collection.views || 0 }}</span>
+        </div>
+
+        <!-- Like button (integrated) -->
+        <button
+          @click="toggleCollectionLike"
+          :disabled="isLikingCollection || !isAuthenticated"
+          class="flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-colors"
+          :class="hasLikedCollection 
+            ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+            : 'bg-blue-100 text-blue-600 hover:bg-blue-200'"
+          :title="!isAuthenticated ? 'Zaloguj się, aby polubić' : ''"
+        >
+          <HeartIcon class="w-4 h-4" :class="hasLikedCollection ? 'fill-current' : ''" />
+          <span>{{ collectionLikesCount }}</span>
+        </button>
+
+        <!-- Share button -->
+        <button
+          @click="shareCollection"
+          class="flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+          title="Udostępnij kolekcję"
+        >
+          <ShareIcon class="w-4 h-4" />
+          <span>Udostępnij</span>
+        </button>
+
+        <!-- Manage access button -->
         <button
           v-if="canEdit && collection.privacy === 'private'"
           @click="openAllowedUsersModal"
-          class="btn-primary"
+          class="flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
         >
-          Zarządzaj dostępem
+          <LockClosedIcon class="w-4 h-4" />
+          <span>Zarządzaj dostępem</span>
         </button>
       </div>
+
+      <!-- Description -->
+      <p v-if="collection.description" class="text-gray-600 mt-4">{{ collection.description }}</p>
     </header>
 
-    <!-- Polubienia i komentarze kolekcji -->
-    <section v-if="collection" class="mb-8 space-y-6">
-      <!-- Polubienia -->
-      <div class="flex items-center gap-4">
+    <!-- Items Section -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-semibold">
+          Przedmioty 
+          <span class="text-gray-500 text-lg">({{ items.length }})</span>
+        </h2>
         <button
-          @click="toggleCollectionLike"
-          :disabled="isLikingCollection"
-          class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors cursor-pointer"
-          :class="hasLikedCollection 
-            ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+          v-if="canEdit"
+          @click="openAddItemForm"
+          class="btn-primary flex items-center gap-2"
         >
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
-          </svg>
-          <span>{{ collectionLikesCount }}</span>
+          <PlusIcon class="w-5 h-5" />
+          Dodaj przedmiot
         </button>
-        <span v-if="!isAuthenticated" class="text-sm text-gray-500">
-          Zaloguj się, aby polubić
-        </span>
       </div>
-
-      <!-- Komentarze -->
-      <div>
-        <h3 class="text-xl font-semibold mb-4">Komentarze ({{ collectionComments.length }})</h3>
-
-        <!-- Dodaj komentarz -->
-        <div v-if="isAuthenticated" class="mb-4">
-          <textarea
-            v-model="newCollectionComment"
-            placeholder="Napisz komentarz do kolekcji..."
-            class="w-full p-3 border rounded-lg resize-none"
-            rows="3"
-          ></textarea>
-          <button
-            @click="addCollectionComment"
-            :disabled="!newCollectionComment.trim() || isAddingCollectionComment"
-            class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {{ isAddingCollectionComment ? 'Dodawanie...' : 'Dodaj komentarz' }}
-          </button>
-        </div>
-        <p v-else class="text-sm text-gray-500 mb-4">
-          Zaloguj się, aby dodać komentarz
-        </p>
-
-        <!-- Lista komentarzy -->
-        <div v-if="collectionComments.length === 0" class="text-gray-500">
-          Brak komentarzy
-        </div>
-        <div v-else class="space-y-4">
-          <div
-            v-for="comment in collectionComments"
-            :key="comment._id"
-            class="p-4 bg-gray-50 rounded-lg"
-          >
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="font-semibold text-gray-800">{{ comment.user?.username || 'Anonim' }}</p>
-                <p class="text-xs text-gray-500">{{ formatCommentDate(comment.createdAt) }}</p>
-              </div>
-              <button
-                v-if="canDeleteCollectionComment(comment)"
-                @click="deleteCollectionComment(comment._id)"
-                class="text-red-500 hover:text-red-700 text-sm"
-              >
-                Usuń
-              </button>
-            </div>
-            <p class="mt-2 text-gray-700">{{ comment.text }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="text-2xl font-semibold mb-4">Przedmioty w tej kolekcji</h2>
 
       <div v-if="isLoading" class="text-center py-8">
         Ładowanie danych...
       </div>
 
-      <div v-else-if="items.length === 0" class="text-center py-8">
+      <div v-else-if="items.length === 0" class="text-center py-8 text-gray-500">
         Brak przedmiotów w tej kolekcji.
       </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div
-          v-for="item in items"
-          :key="item.id || item._id"
-          class="relative group"
-        >
-          <router-link :to="`/items/${item.id || item._id}`" class="block">
-            <div
-              class="p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
-            >
-              <div class="mb-4 relative h-48 overflow-hidden rounded-lg bg-gray-100">
-                <img
-                  :src="getItemCoverUrl(item)"
-                  alt="Zdjęcie przedmiotu"
-                  class="w-full h-full object-cover"
-                  loading="lazy"
-                  @error="$event.target.src = '/placeholder.png'"
-                />
-              </div>
-              <h3
-                class="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition"
-              >
-                {{ item.name }}
-              </h3>
-              <p class="text-sm text-gray-600 mt-2 line-clamp-2">
-                {{ item.description }}
-              </p>
-              
-              <!-- Statystyki przedmiotu (polubienia i komentarze) -->
-              <div class="mt-4 flex gap-4 text-xs text-gray-500">
-                <div class="flex items-center gap-1">
-                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
-                  </svg>
-                  <span>{{ item.likesCount || (item.likes ? item.likes.length : 0) }}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
-                  <span>{{ item.comments?.length || 0 }}</span>
-                </div>
-              </div>
-
-            </div>
-          </router-link>
-
+      <template v-else>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
-            v-if="canEdit"
-            class="absolute top-2 right-2 flex items-start justify-end p-2 z-30 pointer-events-none"
+            v-for="item in paginatedItems"
+            :key="item.id || item._id"
+            class="relative group"
           >
-            <div class="flex gap-2 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                @click.stop="updateItem(item)"
-                class="p-1.5 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
-                title="Edytuj"
-              >
-                <PencilIcon class="w-5 h-5" />
-              </button>
-              <button
-                @click.stop="deleteItem(item.id || item._id)"
-                class="p-1.5 bg-red-100 text-red-600 rounded-md hover:bg-red-200"
-                title="Usuń"
-              >
-                <TrashIcon class="w-5 h-5" />
-              </button>
-            </div>
+            <ItemCard :data="item">
+              <template v-if="canEdit" #actions>
+                <button
+                  @click.stop.prevent="updateItem(item)"
+                  class="p-1.5 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
+                  title="Edytuj"
+                >
+                  <PencilIcon class="w-5 h-5" />
+                </button>
+                <button
+                  @click.stop.prevent="deleteItem(item.id || item._id)"
+                  class="p-1.5 bg-red-100 text-red-600 rounded-md hover:bg-red-200"
+                  title="Usuń"
+                >
+                  <TrashIcon class="w-5 h-5" />
+                </button>
+              </template>
+            </ItemCard>
           </div>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="totalItemPages > 1" class="flex justify-center gap-2 mt-6">
+          <button
+            @click="itemsPage--"
+            :disabled="itemsPage <= 1"
+            class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Poprzednia
+          </button>
+          <span class="px-4 py-2 text-gray-600">
+            {{ itemsPage }} / {{ totalItemPages }}
+          </span>
+          <button
+            @click="itemsPage++"
+            :disabled="itemsPage >= totalItemPages"
+            class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Następna
+          </button>
+        </div>
+      </template>
+    </section>
+
+    <!-- Comments Section -->
+    <section v-if="collection" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">
+        Komentarze 
+        <span class="text-gray-500 text-lg">({{ collectionComments.length }})</span>
+      </h2>
+
+      <!-- Add comment -->
+      <div v-if="isAuthenticated" class="mb-6">
+        <textarea
+          v-model="newCollectionComment"
+          placeholder="Napisz komentarz do kolekcji..."
+          class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+          rows="3"
+        ></textarea>
+        <button
+          @click="addCollectionComment"
+          :disabled="!newCollectionComment.trim() || isAddingCollectionComment"
+          class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          {{ isAddingCollectionComment ? 'Dodawanie...' : 'Dodaj komentarz' }}
+        </button>
+      </div>
+      <p v-else class="text-sm text-gray-500 mb-4">
+        Zaloguj się, aby dodać komentarz
+      </p>
+
+      <!-- Comments list -->
+      <div v-if="collectionComments.length === 0" class="text-gray-500">
+        Brak komentarzy
+      </div>
+      <div v-else class="space-y-4">
+        <div
+          v-for="comment in collectionComments"
+          :key="comment._id"
+          class="p-4 bg-gray-50 rounded-lg"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-semibold text-gray-800">{{ comment.user?.username || 'Anonim' }}</p>
+              <p class="text-xs text-gray-500">{{ formatCommentDate(comment.createdAt) }}</p>
+            </div>
+            <button
+              v-if="canDeleteCollectionComment(comment)"
+              @click="deleteCollectionComment(comment._id)"
+              class="text-red-500 hover:text-red-700 text-sm"
+            >
+              Usuń
+            </button>
+          </div>
+          <p class="mt-2 text-gray-700">{{ comment.text }}</p>
         </div>
       </div>
     </section>
 
-    <button
-      v-if="canEdit"
-      @click="openAddItemForm"
-      class="fixed bottom-12 right-4 btn-primary"
-    >
-      Dodaj przedmiot
-    </button>
-
    <!-- Modals (AddItem, AllowedUsers) and Script Logic remain, handled via replacement content -->
-    <div
-      v-if="showAddItemForm"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    <!-- BaseModal for Adding/Editing Item -->
+    <BaseModal
+      :show="showAddItemForm"
+      :title="isEditingItem ? 'Edytuj przedmiot' : 'Dodaj przedmiot'"
+      @close="closeAddItemForm"
     >
-      <div
-        class="bg-white rounded-lg shadow-xl w-full max-w-xl flex flex-col"
-        style="max-height: 90vh;"
+      <form
+        @submit.prevent="handleAddItem"
+        class="flex-1 flex flex-col overflow-hidden"
       >
-        <div class="p-6 border-b border-gray-200 flex-shrink-0">
-          <h2 class="text-2xl font-semibold">
-            {{ isEditingItem ? "Edytuj przedmiot" : "Dodaj przedmiot" }}
-          </h2>
-        </div>
+        <div class="flex-1 min-h-0 overflow-y-auto p-1">
+          <div class="space-y-4">
+            <div>
+              <label
+                for="itemName"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Nazwa przedmiotu*
+              </label>
+              <input
+                v-model="newItem.name"
+                id="itemName"
+                type="text"
+                class="input-field"
+                required
+              />
+            </div>
 
-        <form
-          @submit.prevent="handleAddItem"
-          class="flex-1 flex flex-col overflow-hidden"
-        >
-          <div class="flex-1 min-h-0 overflow-y-auto p-6">
-            <div class="space-y-4">
-              <div>
-                <label
-                  for="itemName"
-                  class="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Nazwa przedmiotu*
-                </label>
-                <input
-                  v-model="newItem.name"
-                  id="itemName"
-                  type="text"
-                  class="input-field"
-                  required
-                />
-              </div>
+            <div>
+              <label
+                for="itemDescription"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Opis przedmiotu
+              </label>
+              <textarea
+                v-model="newItem.description"
+                id="itemDescription"
+                class="input-field h-24"
+              ></textarea>
+            </div>
 
-              <div>
-                <label
-                  for="itemDescription"
-                  class="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Opis przedmiotu
-                </label>
-                <textarea
-                  v-model="newItem.description"
-                  id="itemDescription"
-                  class="input-field h-24"
-                ></textarea>
-              </div>
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Zdjęcie przedmiotu
+              </label>
+              <ImageUploader v-model="newItem.imageUrl" />
+            </div>
 
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Zdjęcie przedmiotu
-                </label>
-                <ImageUploader v-model="newItem.imageUrl" />
-              </div>
+            <div
+              v-if="collection.category && collection.category.attributes && collection.category.attributes.length"
+              class="mt-4"
+            >
+              <h3 class="text-lg font-semibold mb-2">Atrybuty</h3>
 
               <div
-                v-if="collection.category && collection.category.attributes && collection.category.attributes.length"
-                class="mt-4"
+                v-for="attr in collection.category.attributes"
+                :key="attr.name"
+                class="mb-4"
               >
-                <h3 class="text-lg font-semibold mb-2">Atrybuty</h3>
-
-                <div
-                  v-for="attr in collection.category.attributes"
-                  :key="attr.name"
-                  class="mb-4"
+                <label
+                  :for="`attr-${attr.name}`"
+                  class="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  <label
-                    :for="`attr-${attr.name}`"
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                  {{ attr.name }}<span v-if="attr.required" class="text-red-500">*</span>
+                </label>
+
+                <template v-if="attr.type === 'string' || attr.type === 'text'">
+                  <input
+                    :id="`attr-${attr.name}`"
+                    :value="getAttributeValue(attr)"
+                    @input="setAttributeValue(attr, $event.target.value)"
+                    type="text"
+                    class="input-field"
+                    :required="attr.required"
+                  />
+                </template>
+
+                <template v-else-if="attr.type === 'number'">
+                  <input
+                    :id="`attr-${attr.name}`"
+                    :value="getAttributeValue(attr)"
+                    @input="setAttributeValue(attr, $event.target.valueAsNumber)"
+                    type="number"
+                    class="input-field"
+                    :required="attr.required"
+                  />
+                </template>
+
+                <template v-else-if="attr.type === 'date'">
+                  <input
+                    :id="`attr-${attr.name}`"
+                    :value="getAttributeValue(attr)"
+                    @input="setAttributeValue(attr, $event.target.value)"
+                    type="date"
+                    class="input-field"
+                    :required="attr.required"
+                  />
+                </template>
+
+                <template v-else-if="attr.type === 'boolean'">
+                  <select
+                    :id="`attr-${attr.name}`"
+                    :value="getAttributeValue(attr)"
+                    @change="setAttributeValue(attr, $event.target.value === 'true')"
+                    class="input-field"
+                    :required="attr.required"
                   >
-                    {{ attr.name }}<span v-if="attr.required" class="text-red-500">*</span>
-                  </label>
+                    <option value="true">Tak</option>
+                    <option value="false">Nie</option>
+                  </select>
+                </template>
 
-                  <template v-if="attr.type === 'string' || attr.type === 'text'">
-                    <input
-                      :id="`attr-${attr.name}`"
-                      :value="getAttributeValue(attr)"
-                      @input="setAttributeValue(attr, $event.target.value)"
-                      type="text"
-                      class="input-field"
-                      :required="attr.required"
-                    />
-                  </template>
+                <template v-else-if="attr.type === 'url'">
+                  <input
+                    :id="`attr-${attr.name}`"
+                    :value="getAttributeValue(attr)"
+                    @input="setAttributeValue(attr, $event.target.value)"
+                    type="url"
+                    class="input-field"
+                    :required="attr.required"
+                  />
+                </template>
 
-                  <template v-else-if="attr.type === 'number'">
-                    <input
-                      :id="`attr-${attr.name}`"
-                      :value="getAttributeValue(attr)"
-                      @input="setAttributeValue(attr, $event.target.valueAsNumber)"
-                      type="number"
-                      class="input-field"
-                      :required="attr.required"
-                    />
-                  </template>
-
-                  <template v-else-if="attr.type === 'date'">
-                    <input
-                      :id="`attr-${attr.name}`"
-                      :value="getAttributeValue(attr)"
-                      @input="setAttributeValue(attr, $event.target.value)"
-                      type="date"
-                      class="input-field"
-                      :required="attr.required"
-                    />
-                  </template>
-
-                  <template v-else-if="attr.type === 'boolean'">
-                    <select
-                      :id="`attr-${attr.name}`"
-                      :value="getAttributeValue(attr)"
-                      @change="setAttributeValue(attr, $event.target.value === 'true')"
-                      class="input-field"
-                      :required="attr.required"
-                    >
-                      <option value="true">Tak</option>
-                      <option value="false">Nie</option>
-                    </select>
-                  </template>
-
-                  <template v-else-if="attr.type === 'url'">
-                    <input
-                      :id="`attr-${attr.name}`"
-                      :value="getAttributeValue(attr)"
-                      @input="setAttributeValue(attr, $event.target.value)"
-                      type="url"
-                      class="input-field"
-                      :required="attr.required"
-                    />
-                  </template>
-
-                   <template v-else-if="attr.type === 'select'">
-                    <select
-                      :id="`attr-${attr.name}`"
-                      :value="getAttributeValue(attr)"
-                      @change="setAttributeValue(attr, $event.target.value)"
-                      class="input-field"
-                      :required="attr.required"
-                    >
-                      <option value="" disabled>Wybierz opcję</option>
-                      <option v-for="option in attr.options" :key="option" :value="option">
-                        {{ option }}
-                      </option>
-                    </select>
-                  </template>
-                </div>
+                 <template v-else-if="attr.type === 'select'">
+                  <select
+                    :id="`attr-${attr.name}`"
+                    :value="getAttributeValue(attr)"
+                    @change="setAttributeValue(attr, $event.target.value)"
+                    class="input-field"
+                    :required="attr.required"
+                  >
+                    <option value="" disabled>Wybierz opcję</option>
+                    <option v-for="option in attr.options" :key="option" :value="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                </template>
               </div>
             </div>
           </div>
-
-          <div class="p-6 border-t border-gray-200 flex-shrink-0">
-            <div class="flex justify-end gap-3">
-              <button
-                type="button"
-                @click="closeAddItemForm"
-                class="btn-gray"
-              >
-                Anuluj
-              </button>
-              <button
-                type="submit"
-                class="btn-primary"
-              >
-                Zapisz
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+      
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <button
+            type="button"
+            @click="closeAddItemForm"
+            class="btn-gray"
+          >
+            Anuluj
+          </button>
+          <button
+            @click="handleAddItem"
+            type="button"
+            class="btn-primary"
+          >
+            Zapisz
+          </button>
+        </div>
+      </template>
+    </BaseModal>
 
     <!-- Modal zarządzania dostępem -->
-    <div
-      v-if="showAllowedUsersModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    <BaseModal
+      :show="showAllowedUsersModal"
+      title="Zarządzaj dostępem"
+      @close="closeAllowedUsersModal"
     >
-      <div
-        class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col"
-        style="max-height: 90vh;"
-      >
-        <div class="p-6 border-b border-gray-200 flex-shrink-0">
-          <h2 class="text-2xl font-semibold">Zarządzaj dostępem</h2>
-          <p class="text-sm text-gray-500 mt-1">
-            Dla kolekcji prywatnej: {{ collection.name }}
-          </p>
-        </div>
+      <div>
+        <p class="text-sm text-gray-500 mb-4">
+          Dla kolekcji prywatnej: {{ collection.name }}
+        </p>
 
-        <div class="p-6 flex-1 min-h-0 overflow-y-auto">
+        <div class="flex-1 min-h-0 overflow-y-auto">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">
               Dodaj użytkownika (nazwa)
@@ -455,19 +436,19 @@
             </ul>
           </div>
         </div>
-
-        <div class="p-6 border-t border-gray-200 flex-shrink-0">
-          <div class="flex justify-end">
-            <button
-              @click="closeAllowedUsersModal"
-              class="btn-gray"
-            >
-              Zamknij
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+
+      <template #footer>
+        <div class="flex justify-end">
+          <button
+            @click="closeAllowedUsersModal"
+            class="btn-gray"
+          >
+            Zamknij
+          </button>
+        </div>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -478,13 +459,15 @@ import { useToast } from "vue-toastification";
 import store from "@/store";
 import CollectionService from "@/services/CollectionService";
 import ItemService from "@/services/ItemService";
-import { PencilIcon, TrashIcon } from "@heroicons/vue/24/outline";
+import { PencilIcon, TrashIcon, FolderIcon, EyeIcon, HeartIcon, LockClosedIcon, PlusIcon, ShareIcon } from "@heroicons/vue/24/outline";
 import ImageUploader from "@/components/ImageUploader.vue";
+import ItemCard from "@/components/ItemCard.vue";
+import BaseModal from "@/components/BaseModal.vue";
 import { getImageUrl } from "@/utils/imageUrl";
 
 export default {
   name: "SingleCollectionView",
-  components: { PencilIcon, TrashIcon, ImageUploader },
+  components: { PencilIcon, TrashIcon, FolderIcon, EyeIcon, HeartIcon, LockClosedIcon, PlusIcon, ShareIcon, ImageUploader, ItemCard, BaseModal },
 
   setup() {
     const route = useRoute();
@@ -503,6 +486,15 @@ export default {
     });
 
     const isEditingItem = ref(false);
+
+    // Items pagination
+    const itemsPage = ref(1);
+    const itemsPerPage = 9;
+    const totalItemPages = computed(() => Math.ceil(items.value.length / itemsPerPage));
+    const paginatedItems = computed(() => {
+      const start = (itemsPage.value - 1) * itemsPerPage;
+      return items.value.slice(start, start + itemsPerPage);
+    });
 
     // Collection likes/comments
     const isAuthenticated = computed(() => store.getters['auth/isAuthenticated']);
@@ -896,6 +888,34 @@ export default {
       }
     };
 
+    const shareCollection = () => {
+      const url = window.location.href;
+      
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch (error) {
+        // Copy failed silently
+      }
+      
+      textArea.remove();
+      
+      if (copied) {
+        toast.success('Skopiowano link do schowka!');
+      } else {
+        toast.info('Skopiuj link: ' + url);
+      }
+    };
+
     onMounted(async () => {
       await loadCollection();
       await loadItems();
@@ -917,6 +937,12 @@ export default {
       updateItem,
       deleteItem,
       getItemCoverUrl,
+      getImageUrl,
+      
+      // Items pagination
+      itemsPage,
+      totalItemPages,
+      paginatedItems,
       
       // Allowed users stats
       showAllowedUsersModal,
@@ -939,6 +965,7 @@ export default {
       hasLikedCollection,
       collectionLikesCount,
       toggleCollectionLike,
+      shareCollection,
       addCollectionComment,
       deleteCollectionComment,
       canDeleteCollectionComment,

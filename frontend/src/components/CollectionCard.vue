@@ -1,22 +1,35 @@
 <template>
-  <router-link :to="linkTo" class="block group">
-    <div class="card-container">
-      <!-- Image -->
-      <div class="card-image">
-        <img
-          :src="imageUrl"
-          :alt="data.name"
-          class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-          @error="handleImageError"
-        />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        
-        <!-- Badge (privacy or type) -->
-        <div v-if="badge" class="absolute top-3 left-3">
-          <span :class="badgeClasses">{{ badge }}</span>
+  <div class="card-wrapper">
+    <!-- Action buttons slot -->
+    <div v-if="$slots.actions" class="card-actions">
+      <slot name="actions" />
+    </div>
+    
+    <router-link :to="linkTo" class="block group">
+      <div class="card-container">
+        <!-- Image -->
+        <div class="card-image">
+          <template v-if="hasImage">
+            <img
+              :src="imageUrl"
+              :alt="data.name"
+              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+              @error="handleImageError"
+            />
+          </template>
+          <template v-else>
+            <div class="card-placeholder">
+              <FolderIcon class="w-16 h-16 text-gray-300" />
+            </div>
+          </template>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          
+          <!-- Badge (privacy or type) -->
+          <div v-if="badge" class="absolute top-3 left-3">
+            <span :class="badgeClasses">{{ badge }}</span>
+          </div>
         </div>
-      </div>
 
       <!-- Content -->
       <div class="card-content">
@@ -56,6 +69,7 @@
       </div>
     </div>
   </router-link>
+  </div>
 </template>
 
 <script>
@@ -65,7 +79,8 @@ import {
   DocumentTextIcon, 
   EyeIcon, 
   HeartIcon,
-  ChatBubbleLeftIcon 
+  ChatBubbleLeftIcon,
+  FolderIcon
 } from '@heroicons/vue/24/outline'
 import { getImageUrl } from '@/utils/imageUrl'
 
@@ -77,7 +92,8 @@ export default {
     DocumentTextIcon,
     EyeIcon,
     HeartIcon,
-    ChatBubbleLeftIcon
+    ChatBubbleLeftIcon,
+    FolderIcon
   },
   
   props: {
@@ -97,6 +113,10 @@ export default {
     showOwner: {
       type: Boolean,
       default: true
+    },
+    hideBadge: {
+      type: Boolean,
+      default: false
     }
   },
 
@@ -113,12 +133,18 @@ export default {
       }
     })
 
+    const hasImage = computed(() => {
+      const img = props.data.coverImage || props.data.image || props.data.images?.[0]
+      return !!img
+    })
+
     const imageUrl = computed(() => {
       const img = props.data.coverImage || props.data.image || props.data.images?.[0]
-      return img ? getImageUrl(img) : '/placeholder-collection.svg'
+      return img ? getImageUrl(img) : ''
     })
 
     const badge = computed(() => {
+      if (props.hideBadge) return null
       if (props.type === 'collection' && props.data.privacy) {
         return props.data.privacy === 'public' ? 'Publiczna' : 'Prywatna'
       }
@@ -144,6 +170,7 @@ export default {
 
     return {
       linkTo,
+      hasImage,
       imageUrl,
       badge,
       badgeClasses,
@@ -159,17 +186,30 @@ export default {
 </script>
 
 <style scoped>
+.card-wrapper {
+  @apply relative;
+}
+
+.card-actions {
+  @apply absolute top-2 right-2 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity;
+}
+
 .card-container {
   @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden
-         hover:shadow-lg hover:border-gray-200 transition-all duration-300;
+         hover:shadow-lg hover:border-gray-200 transition-all duration-300
+         min-h-[320px] flex flex-col;
 }
 
 .card-image {
-  @apply relative h-48 overflow-hidden bg-gray-100;
+  @apply relative h-48 overflow-hidden bg-gray-100 flex-shrink-0;
+}
+
+.card-placeholder {
+  @apply w-full h-full flex items-center justify-center bg-gray-100;
 }
 
 .card-content {
-  @apply p-5;
+  @apply p-5 flex-1 flex flex-col;
 }
 
 .card-title {

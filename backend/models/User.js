@@ -69,6 +69,10 @@ const userSchema = new mongoose.Schema(
         avatar: {
             type: String,
             default: ""
+        },
+        isProfilePublic: {
+            type: Boolean,
+            default: true
         }
     },
     {

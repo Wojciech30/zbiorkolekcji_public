@@ -27,6 +27,21 @@
         transition-colors
         dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500;
     }
+
+    /* Unified modal content container - 2/3 page width */
+    .modal-content {
+        width: 66.666667%;
+        max-width: 800px;
+        min-width: 320px;
+        max-height: 90vh;
+        @apply bg-white rounded-lg shadow-xl flex flex-col;
+    }
+
+    @media (max-width: 768px) {
+        .modal-content {
+            width: 95%;
+        }
+    }
 }
 
 /* Custom utilities */

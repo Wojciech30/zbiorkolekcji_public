@@ -5,6 +5,7 @@ import User from "../models/User.js";
 export const verifyCollectionAccess = async (req, res, next) => {
   try {
     const collection = await Collection.findById(req.params.id)
+      .populate("owner", "_id username avatar")
       .populate("category", "name attributes")
       .populate("allowedUsers", "username email");
 
@@ -29,7 +30,8 @@ export const verifyCollectionAccess = async (req, res, next) => {
       });
     }
 
-    const isOwner = collection.owner.toString() === userId;
+    const ownerId = collection.owner._id || collection.owner;
+    const isOwner = ownerId.toString() === userId;
     const isAdmin = req.user?.role === "admin";
     const isAllowed = collection.allowedUsers.some(u => u._id.toString() === userId);
 
@@ -68,7 +70,8 @@ export const verifyCollectionOwnership = (req, res, next) => {
     }
 
     const userId = req.user._id.toString();
-    const isOwner = req.collection.owner.toString() === userId;
+    const ownerId = req.collection.owner._id || req.collection.owner;
+    const isOwner = ownerId.toString() === userId;
     const isAdmin = req.user.role === "admin";
 
     if (!isOwner && !isAdmin) {

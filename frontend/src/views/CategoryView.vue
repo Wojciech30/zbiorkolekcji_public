@@ -46,52 +46,17 @@
         <p class="text-gray-500">Brak kolekcji w tej kategorii</p>
       </div>
 
-      <!-- Lista kolekcji (Ujednolicona z CollectionsView) -->
+      <!-- Lista kolekcji -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
-            v-for="collection in collections"
-            :key="collection._id"
-            class="group p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
-        >
-          <router-link
-              :to="`/collections/${collection._id}`"
-              class="block"
-          >
-             <!-- Okładka -->
-             <div class="mb-4 relative h-48 overflow-hidden rounded-lg bg-gray-100">
-              <img
-                  :src="collection.coverImage ? getImageUrl(collection.coverImage) : '/placeholder-collection.svg'"
-                  alt="Okładka kolekcji"
-                  class="w-full h-full object-cover"
-                  @error="$event.target.src = '/placeholder-collection.svg'"
-              />
-            </div>
-
-            <h3 class="text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition">
-              {{ collection.name }}
-            </h3>
-            
-            <p v-if="collection.description" class="text-gray-600 mt-2 line-clamp-2">
-              {{ collection.description }}
-            </p>
-
-             <!-- Statystyki -->
-            <div class="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
-              <div class="flex items-center gap-1">
-                <UserIcon class="w-4 h-4" />
-                <span>{{ collection.owner?.username }}</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <DocumentTextIcon class="w-4 h-4" />
-                <span>{{ collection.itemsCount || 0 }} elementów</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <EyeIcon class="w-4 h-4" />
-                <span>{{ collection.views || 0 }} wyświetleń</span>
-              </div>
-            </div>
-          </router-link>
-        </div>
+        <CollectionCard
+          v-for="collection in sortedCollections"
+          :key="collection._id"
+          :data="collection"
+          type="collection"
+          :showStats="true"
+          :showOwner="true"
+          :hideBadge="true"
+        />
       </div>
     </section>
   </div>
@@ -99,15 +64,13 @@
 
 <script>
 import CategoryService from '@/services/CategoryService'
-import { getImageUrl } from '@/utils/imageUrl'
-import { UserIcon, DocumentTextIcon, EyeIcon } from '@heroicons/vue/24/outline'
+import CollectionCard from '@/components/CollectionCard.vue'
+import { formatDate } from '@/utils/dateUtils'
 
 export default {
   name: "CategoryView",
   components: {
-    UserIcon,
-    DocumentTextIcon,
-    EyeIcon
+    CollectionCard
   },
   data() {
     return {
@@ -128,8 +91,12 @@ export default {
       immediate: true
     }
   },
+  computed: {
+    sortedCollections() {
+      return [...this.collections].sort((a, b) => (b.views || 0) - (a.views || 0))
+    }
+  },
   methods: {
-    getImageUrl, // Udostępnij helper w template
     async loadData() {
       try {
         this.isLoading = true
@@ -171,11 +138,7 @@ export default {
       return /^[0-9a-fA-F]{24}$/.test(id)
     },
     formatDate(isoString) {
-      return new Date(isoString).toLocaleDateString('pl-PL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+      return formatDate(isoString);
     },
     changePage(delta) {
       const newPage = this.pagination.page + delta

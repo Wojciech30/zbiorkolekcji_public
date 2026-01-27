@@ -13,6 +13,8 @@ import collectionsRouter from "./routes/collections.js";
 import itemsRouter from "./routes/items.js";
 import adminRouter from "./routes/admin.js";
 import uploadsRouter from "./routes/uploads.js";
+import usersRouter from "./routes/users.js";
+import supportRouter from "./routes/support.js";
 import errorHandler from "./middleware/errorHandler.js";
 import mongoose from "mongoose";
 
@@ -63,6 +65,8 @@ app.use("/api/v1/categories", categoriesRouter);
 app.use("/api/v1/items", itemsRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/uploads", uploadsRouter);
+app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/support", supportRouter);
 
 // 6.5 Serwowanie plików statycznych (uploads)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

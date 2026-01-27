@@ -35,6 +35,20 @@ export default {
             }
         },
 
+        // Use this to update user fields without affecting storage location
+        UPDATE_USER(state, updates) {
+            if (!state.user) return;
+            
+            state.user = { ...state.user, ...updates };
+            
+            // Determine which storage to use based on rememberMe
+            const storage = localStorage.getItem("rememberMe") === "true" 
+                ? localStorage 
+                : sessionStorage;
+            
+            storage.setItem("user", JSON.stringify(state.user));
+        },
+
         SET_TOKENS(state, { accessToken, refreshToken, rememberMe }) {
             state.accessToken = accessToken;
             state.refreshToken = refreshToken;

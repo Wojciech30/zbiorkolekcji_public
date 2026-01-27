@@ -77,14 +77,8 @@ apiClient.interceptors.response.use(
             toast.error(normalized.message);
         }
 
-        if (
-            status === 401 &&
-            !isAuthLogin &&
-            !isAuthRegister &&
-            !isAuthRefresh
-        ) {
-            await store.dispatch("auth/logout");
-        }
+        // Note: 401 logout is handled in the retry block above
+        // Only logout here if it's a 401 that wasn't retried (shouldn't happen normally)
 
         return Promise.reject(error);
     }

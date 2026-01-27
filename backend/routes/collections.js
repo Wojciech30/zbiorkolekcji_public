@@ -38,7 +38,7 @@ router.get("/", async (req, res) => {
         if (search) filter.$text = { $search: search };
 
         const collections = await Collection.find(filter)
-            .populate("owner", "username")
+            .populate("owner", "_id username")
             .populate("category", "name")
             .sort("-createdAt")
             .limit(Number(limit))
@@ -74,7 +74,7 @@ router.get("/me", authenticateToken, async (req, res) => {
         const { page = 1, limit = 10 } = req.query;
 
         const collections = await Collection.find({ owner: req.user._id })
-            .populate("owner", "username")
+            .populate("owner", "_id username")
             .populate("category", "name")
             .sort("-createdAt")
             .limit(Number(limit))
@@ -111,6 +111,59 @@ router.get("/me", authenticateToken, async (req, res) => {
         });
     } catch (error) {
         handleError(res, error, "Błąd pobierania kolekcji użytkownika");
+    }
+});
+
+// GET /me/liked - Get collections liked by current user
+router.get("/me/liked", authenticateToken, async (req, res) => {
+    try {
+        const { page = 1, limit = 6 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get total count
+        const total = await Collection.countDocuments({
+            likes: req.user._id,
+            privacy: "public"
+        });
+
+        const collections = await Collection.find({
+            likes: req.user._id,
+            privacy: "public"
+        })
+            .populate("owner", "_id username avatar")
+            .populate("category", "name")
+            .sort("-createdAt")
+            .skip(skip)
+            .limit(limitNum);
+
+        // Oblicz itemsCount dla każdej kolekcji
+        const collectionsWithStats = await Promise.all(
+            collections.map(async (collection) => {
+                const collectionObj = collection.toObject();
+                const itemsCount = await Item.countDocuments({ parentCollection: collection._id });
+
+                return {
+                    ...collectionObj,
+                    itemsCount,
+                    likesCount: collection.likes?.length || 0
+                };
+            })
+        );
+
+        res.json({
+            code: "LIKED_COLLECTIONS_FETCHED",
+            collections: collectionsWithStats,
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        handleError(res, error, "Błąd pobierania polubionych kolekcji");
     }
 });
 
@@ -169,7 +222,7 @@ router.patch(
                 updates,
                 { new: true, runValidators: true }
             )
-                .populate("owner", "username")
+                .populate("owner", "_id username")
                 .populate("category", "name attributes")
                 .populate("allowedUsers", "username email");
 
@@ -212,12 +265,33 @@ router.get("/:id/items", validateObjectId, optionalAuthenticate, verifyCollectio
     }
 });
 
+router.get("/special/stats", async (req, res) => {
+    try {
+        const [collectionsCount, itemsCount, usersCount] = await Promise.all([
+            Collection.countDocuments({ privacy: "public" }),
+            Item.countDocuments(),
+            User.countDocuments()
+        ]);
+
+        res.json({
+            code: "GLOBAL_STATS",
+            stats: {
+                collections: collectionsCount,
+                items: itemsCount,
+                users: usersCount
+            }
+        });
+    } catch (error) {
+        handleError(res, error, "Błąd pobierania statystyk");
+    }
+});
+
 router.get("/special/popular", async (req, res) => {
     try {
         const popularCollections = await Collection.find({ privacy: "public" })
             .sort({ views: -1 })
             .limit(10)
-            .populate("owner", "username")
+            .populate("owner", "_id username")
             .populate("category", "name");
 
         res.json({
@@ -449,7 +523,8 @@ router.delete("/:id/comments/:commentId", validateObjectId, authenticateToken, v
             });
         }
 
-        comment.remove();
+        // Use pull() to remove subdocument from array (Mongoose 6+ compatible)
+        collection.comments.pull(req.params.commentId);
         await collection.save();
 
         res.json({

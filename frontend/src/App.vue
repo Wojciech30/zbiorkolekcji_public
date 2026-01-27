@@ -4,27 +4,46 @@
     <AppHeader />
     <!-- Dynamiczne wstawianie widoków w zależności od trasy -->
     <router-view />
-    <!-- Stopka (opcjonalna) -->
+    <!-- Stopka -->
     <footer>
-      <p>&copy; 2024 Zbiór Kolekcji. Wszystkie prawa zastrzeżone.</p>
+      <div class="footer-content">
+        <p>&copy; 2024 Zbiór Kolekcji. Wszystkie prawa zastrzeżone.</p>
+        <button 
+          v-if="isAuthenticated"
+          @click="showFeedbackModal = true" 
+          class="feedback-btn"
+        >
+          Zgłoś problem
+        </button>
+      </div>
     </footer>
+    
+    <!-- Feedback Modal -->
+    <FeedbackModal 
+      :show="showFeedbackModal" 
+      @close="showFeedbackModal = false" 
+    />
   </div>
 </template>
 
 <script>
-import AppHeader from "./components/AppHeader.vue"; // Nagłówek aplikacji
-import { mapActions } from "vuex";
+import AppHeader from "./components/AppHeader.vue";
+import FeedbackModal from "./components/FeedbackModal.vue";
+import { mapGetters } from "vuex";
+import { ref } from "vue";
 
 export default {
   name: "App",
   components: {
     AppHeader,
+    FeedbackModal,
   },
-  created() {
-    this.fetchProfile();
+  setup() {
+    const showFeedbackModal = ref(false);
+    return { showFeedbackModal };
   },
-  methods: {
-    ...mapActions(["fetchProfile"]),
+  computed: {
+    ...mapGetters("auth", ["isAuthenticated"]),
   },
 };
 </script>
@@ -47,9 +66,38 @@ export default {
 footer {
   margin-top: auto;
   background-color: #f8f9fa;
-  padding: 10px;
+  padding: 10px 20px;
   text-align: center;
   font-size: 0.9em;
   border-top: 1px solid #ddd;
 }
+
+.footer-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-content p {
+  margin: 0;
+}
+
+.feedback-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  font-size: 0.9em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.feedback-btn:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  text-decoration: underline;
+}
 </style>
+

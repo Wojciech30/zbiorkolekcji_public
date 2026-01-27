@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto p-4 max-w-4xl">
+  <div class="container mx-auto p-4">
     <!-- Header z danymi użytkownika -->
     <header class="mb-8">
       <div class="bg-white rounded-lg shadow-md p-6">
@@ -31,11 +31,11 @@
             </button>
           </div>
           
-          <div>
+          <div class="flex-grow">
             <h1 class="text-3xl font-bold text-gray-800">{{ user?.username }}</h1>
             <p class="text-gray-500">{{ user?.email }}</p>
-            <p class="text-sm text-gray-400 mt-1">
-              Na platformie od {{ formatDate(user?.createdAt) }}
+            <p v-if="user?.createdAt" class="text-sm text-gray-400 mt-1">
+              Na platformie od {{ formatRelativeTime(user?.createdAt) }}
             </p>
             <span 
               v-if="user?.role === 'admin'" 
@@ -44,6 +44,15 @@
               Administrator
             </span>
           </div>
+          
+          <!-- Settings icon -->
+          <button
+            @click="showSettingsModal = true"
+            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Ustawienia konta"
+          >
+            <Cog6ToothIcon class="w-6 h-6" />
+          </button>
         </div>
       </div>
     </header>
@@ -71,58 +80,136 @@
       </div>
     </section>
 
-    <!-- Moje kolekcje (preview) -->
-    <section class="mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-semibold">Moje kolekcje</h2>
-        <router-link to="/my-collections" class="text-blue-600 hover:underline">
-          Zobacz wszystkie →
-        </router-link>
+    <!-- Polubione kolekcje -->
+    <section class="mb-8" v-if="likedCollections.length > 0 || likedPagination.total > 0">
+      <h2 class="text-2xl font-semibold mb-4">
+        Polubione kolekcje
+        <span class="text-gray-400 text-lg font-normal">({{ likedPagination.total }})</span>
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CollectionCard
+          v-for="collection in likedCollections"
+          :key="collection._id"
+          :data="collection"
+          type="collection"
+          :showStats="true"
+          :showOwner="true"
+        />
       </div>
-      
-      <div v-if="recentCollections.length === 0" class="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-        Nie masz jeszcze żadnych kolekcji.
-        <router-link to="/my-collections" class="text-blue-600 hover:underline ml-1">
-          Stwórz pierwszą!
-        </router-link>
-      </div>
-      
-      <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <router-link
-          v-for="collection in recentCollections"
-          :key="collection._id || collection.id"
-          :to="`/collections/${collection._id || collection.id}`"
-          class="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+      <!-- Pagination -->
+      <div v-if="likedPagination.pages > 1" class="mt-6 flex justify-center gap-2">
+        <button
+          @click="changeLikedPage(-1)"
+          :disabled="likedPagination.page === 1"
+          class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <h3 class="font-semibold text-gray-800">{{ collection.name }}</h3>
-          <p class="text-sm text-gray-500 truncate">{{ collection.description }}</p>
-          <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
-            <span>{{ collection.itemsCount || 0 }} przedmiotów</span>
-            <span>❤ {{ collection.likesCount || 0 }}</span>
-          </div>
-        </router-link>
+          ← Poprzednia
+        </button>
+        <span class="px-4 py-2 text-gray-600">
+          Strona {{ likedPagination.page }} z {{ likedPagination.pages }}
+        </span>
+        <button
+          @click="changeLikedPage(1)"
+          :disabled="likedPagination.page >= likedPagination.pages"
+          class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Następna →
+        </button>
       </div>
     </section>
 
-    <!-- Zmiana hasła - przycisk otwierający modal -->
-    <section class="bg-white rounded-lg shadow-md p-6 text-center">
-      <h2 class="text-2xl font-semibold mb-4">Bezpieczeństwo</h2>
-      <button
-        @click="showPasswordModal = true"
-        class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-semibold transition-colors"
-      >
-        Zmień hasło
-      </button>
-    </section>
+    <!-- BaseModal import for user settings -->
+    <BaseModal
+      :show="showSettingsModal"
+      title="Ustawienia konta"
+      @close="showSettingsModal = false"
+    >
+      <div class="space-y-6">
+        <!-- Widoczność profilu -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="font-medium text-gray-800">Widoczność profilu</h4>
+            <p class="text-sm text-gray-500">Pozwól innym odwiedzać Twój profil</p>
+          </div>
+          <button
+            @click="toggleProfileVisibility"
+            :disabled="isSavingVisibility"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            :class="isProfilePublic ? 'bg-blue-600' : 'bg-gray-200'"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+              :class="isProfilePublic ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+        
+        <hr class="border-gray-200" />
+        
+        <!-- Zmiana hasła -->
+        <div>
+          <h4 class="font-medium text-gray-800 mb-3">Zmiana hasła</h4>
+          <button
+            @click="showSettingsModal = false; showPasswordModal = true"
+            class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-semibold transition-colors"
+          >
+            Zmień hasło
+          </button>
+        </div>
+        
+        <hr class="border-gray-200" />
+        
+        <!-- Usunięcie konta -->
+        <div>
+          <h4 class="font-medium text-red-600 mb-2">Strefa niebezpieczna</h4>
+          <p class="text-sm text-gray-500 mb-3">Usunięcie konta jest nieodwracalne. Wszystkie Twoje dane zostaną trwale usunięte.</p>
+          <button
+            v-if="!showDeleteConfirmation"
+            @click="showDeleteConfirmation = true"
+            class="w-full px-4 py-2 border border-red-500 text-red-500 rounded hover:bg-red-50 font-semibold transition-colors"
+          >
+            Usuń konto
+          </button>
+          
+          <!-- Potwierdzenie usunięcia -->
+          <div v-else class="space-y-3">
+            <p class="text-sm text-red-600 font-medium">Wpisz swoje hasło, aby potwierdzić usunięcie:</p>
+            <input
+              v-model="deleteConfirmPassword"
+              type="password"
+              placeholder="Twoje hasło"
+              class="w-full px-3 py-2 border border-red-300 rounded focus:ring-red-500 focus:border-red-500"
+            />
+            <div class="flex gap-2">
+              <button
+                @click="showDeleteConfirmation = false; deleteConfirmPassword = ''"
+                class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                Anuluj
+              </button>
+              <button
+                @click="deleteAccount"
+                :disabled="isDeletingAccount || !deleteConfirmPassword"
+                class="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-semibold transition-colors disabled:opacity-50"
+              >
+                {{ isDeletingAccount ? 'Usuwanie...' : 'Potwierdź usunięcie' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
 
     <!-- Modal zmiany avatara -->
-    <div v-if="showAvatarModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-        <h3 class="text-xl font-semibold mb-4">Zmień zdjęcie profilowe</h3>
-        
-        <ImageUploader v-model="newAvatarUrl" />
-        
-        <div class="flex justify-end gap-3 mt-4">
+    <BaseModal
+      :show="showAvatarModal"
+      title="Zmień zdjęcie profilowe"
+      @close="showAvatarModal = false; newAvatarUrl = ''"
+    >
+      <ImageUploader v-model="newAvatarUrl" />
+      
+      <template #footer>
+        <div class="flex justify-end gap-3">
           <button
             @click="showAvatarModal = false; newAvatarUrl = ''"
             class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
@@ -139,91 +226,93 @@
             <span v-else>Zapisywanie...</span>
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </BaseModal>
 
     <!-- Modal zmiany hasła -->
-    <div v-if="showPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col" style="max-height: 90vh;">
-        <div class="p-6 border-b border-gray-200 flex-shrink-0">
-          <h3 class="text-xl font-semibold">Zmiana hasła</h3>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-6">
-          <div
-            v-if="passwordServerError"
-            class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
-          >
-            <p class="font-semibold">Wystąpił błąd:</p>
-            <p>{{ passwordServerError }}</p>
-          </div>
-
-          <form @submit.prevent="submitChangePassword" class="space-y-4">
-            <div>
-              <label for="currentPassword" class="block font-medium mb-1">Obecne hasło</label>
-              <input
-                v-model="passwordForm.currentPassword"
-                type="password"
-                id="currentPassword"
-                class="input-field"
-                :class="{ 'border-red-500': passwordErrors.currentPassword }"
-              />
-              <p v-if="passwordErrors.currentPassword" class="text-red-500 text-sm mt-1">
-                {{ passwordErrors.currentPassword }}
-              </p>
-            </div>
-
-            <div>
-              <label for="newPassword" class="block font-medium mb-1">Nowe hasło</label>
-              <input
-                v-model="passwordForm.newPassword"
-                type="password"
-                id="newPassword"
-                class="input-field"
-                :class="{ 'border-red-500': passwordErrors.newPassword }"
-              />
-              <p v-if="passwordErrors.newPassword" class="text-red-500 text-sm mt-1">
-                {{ passwordErrors.newPassword }}
-              </p>
-            </div>
-
-            <div>
-              <label for="confirmPassword" class="block font-medium mb-1">Powtórz nowe hasło</label>
-              <input
-                v-model="passwordForm.confirmPassword"
-                type="password"
-                id="confirmPassword"
-                class="input-field"
-                :class="{ 'border-red-500': passwordErrors.confirmPassword }"
-              />
-              <p v-if="passwordErrors.confirmPassword" class="text-red-500 text-sm mt-1">
-                {{ passwordErrors.confirmPassword }}
-              </p>
-            </div>
-          </form>
-        </div>
-
-        <div class="p-6 border-t border-gray-200 flex-shrink-0">
-          <div class="flex justify-end gap-3">
-            <button
-              @click="closePasswordModal"
-              class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              Anuluj
-            </button>
-            <button
-              @click="submitChangePassword"
-              :disabled="isChangingPassword"
-              class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              :class="{ 'opacity-60 cursor-not-allowed': isChangingPassword }"
-            >
-              <span v-if="!isChangingPassword">Zmień hasło</span>
-              <span v-else>Zmiana hasła...</span>
-            </button>
-          </div>
-        </div>
+    <BaseModal
+      :show="showPasswordModal"
+      title="Zmiana hasła"
+      @close="closePasswordModal"
+    >
+      <div
+        v-if="passwordServerError"
+        class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
+      >
+        <p class="font-semibold">Wystąpił błąd:</p>
+        <p>{{ passwordServerError }}</p>
       </div>
-    </div>
+
+      <form @submit.prevent="submitChangePassword" class="space-y-4">
+        <div>
+          <label for="currentPassword" class="block font-medium mb-1">Obecne hasło</label>
+          <input
+            v-model="passwordForm.currentPassword"
+            type="password"
+            id="currentPassword"
+            class="input-field"
+            :class="{ 'border-red-500': passwordErrors.currentPassword }"
+          />
+          <p v-if="passwordErrors.currentPassword" class="text-red-500 text-sm mt-1">
+            {{ passwordErrors.currentPassword }}
+          </p>
+        </div>
+
+        <div>
+          <label for="newPassword" class="block font-medium mb-1">Nowe hasło</label>
+          <input
+            v-model="passwordForm.newPassword"
+            type="password"
+            id="newPassword"
+            class="input-field"
+            :class="{ 'border-red-500': passwordErrors.newPassword }"
+          />
+          <p v-if="passwordErrors.newPassword" class="text-red-500 text-sm mt-1">
+            {{ passwordErrors.newPassword }}
+          </p>
+        </div>
+
+        <div>
+          <label for="confirmPassword" class="block font-medium mb-1">Powtórz nowe hasło</label>
+          <input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            id="confirmPassword"
+            class="input-field"
+            :class="{ 'border-red-500': passwordErrors.confirmPassword }"
+          />
+          <p v-if="passwordErrors.confirmPassword" class="text-red-500 text-sm mt-1">
+            {{ passwordErrors.confirmPassword }}
+          </p>
+        </div>
+      </form>
+      
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <button
+            @click="closePasswordModal"
+            class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Anuluj
+          </button>
+          <button
+            @click="submitChangePassword"
+            :disabled="isChangingPassword"
+            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            :class="{ 'opacity-60 cursor-not-allowed': isChangingPassword }"
+          >
+            <span v-if="!isChangingPassword">Zmień hasło</span>
+            <span v-else>Zmiana hasła...</span>
+          </button>
+        </div>
+      </template>
+    </BaseModal>
+
+    <!-- Feedback Modal -->
+    <FeedbackModal 
+      :show="showFeedbackModal" 
+      @close="showFeedbackModal = false" 
+    />
   </div>
 </template>
 
@@ -231,20 +320,31 @@
 import AuthService from "@/services/AuthService";
 import CollectionService from "@/services/CollectionService";
 import ImageUploader from "@/components/ImageUploader.vue";
+import CollectionCard from "@/components/CollectionCard.vue";
+import FeedbackModal from "@/components/FeedbackModal.vue";
+import BaseModal from "@/components/BaseModal.vue";
+import { Cog6ToothIcon } from "@heroicons/vue/24/outline";
 import { useToast } from "vue-toastification";
 import { getUserFriendlyErrorMessage } from "@/utils/errorHandler";
 import { getImageUrl } from "@/utils/imageUrl";
+import { formatRelativeTime } from "@/utils/dateUtils";
 import { ref, reactive, computed, onMounted } from "vue";
 import { useStore } from "vuex";
+import { useRouter } from "vue-router";
 
 export default {
   name: "ProfileView",
   components: {
-    ImageUploader
+    ImageUploader,
+    CollectionCard,
+    FeedbackModal,
+    Cog6ToothIcon,
+    BaseModal
   },
   setup() {
     const toast = useToast();
     const store = useStore();
+    const router = useRouter();
 
     const user = computed(() => store.state.auth.user);
     
@@ -259,16 +359,31 @@ export default {
       likesReceived: 0,
       commentsCount: 0
     });
-
-    const recentCollections = ref([]);
+    
+    // Profile visibility
+    const isProfilePublic = ref(true);
+    const isSavingVisibility = ref(false);
     
     // Avatar
     const showAvatarModal = ref(false);
     const newAvatarUrl = ref("");
     const isSavingAvatar = ref(false);
 
+    // Liked collections with pagination
+    const likedCollections = ref([]);
+    const likedPagination = ref({ page: 1, limit: 6, total: 0, pages: 1 });
+
     // Password modal
     const showPasswordModal = ref(false);
+    
+    // Settings modal
+    const showSettingsModal = ref(false);
+    const showDeleteConfirmation = ref(false);
+    const deleteConfirmPassword = ref("");
+    const isDeletingAccount = ref(false);
+    
+    // Feedback modal
+    const showFeedbackModal = ref(false);
 
     const isChangingPassword = ref(false);
     const passwordServerError = ref("");
@@ -285,15 +400,7 @@ export default {
       confirmPassword: ""
     });
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('pl-PL', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
-    };
+    // Use relative time for "on platform since"
 
     const loadUserData = async () => {
       try {
@@ -301,15 +408,63 @@ export default {
         const response = await CollectionService.getUserCollections({ limit: 100 });
         const collections = response.data?.collections || [];
         
-        recentCollections.value = collections.slice(0, 3);
-        
         // Oblicz statystyki z danych zwróconych przez backend
         stats.value.collectionsCount = collections.length;
         stats.value.itemsCount = collections.reduce((sum, c) => sum + (c.itemsCount || 0), 0);
         stats.value.likesReceived = collections.reduce((sum, c) => sum + (c.likesCount || 0), 0);
         stats.value.commentsCount = collections.reduce((sum, c) => sum + (c.commentsCount || 0), 0);
+        
+        // Pobierz ustawienie widoczności profilu
+        isProfilePublic.value = user.value?.isProfilePublic !== false;
+        
+        // Pobierz polubione kolekcje
+        await loadLikedCollections();
       } catch (error) {
         console.error('Błąd ładowania danych profilu:', error);
+      }
+    };
+    
+    const loadLikedCollections = async (page = 1) => {
+      try {
+        const response = await CollectionService.getLikedCollections({ 
+          page, 
+          limit: likedPagination.value.limit 
+        });
+        likedCollections.value = response.data?.collections || [];
+        likedPagination.value = {
+          ...likedPagination.value,
+          page: response.data?.pagination?.page || 1,
+          total: response.data?.pagination?.total || 0,
+          pages: response.data?.pagination?.pages || 1
+        };
+      } catch (error) {
+        console.error('Błąd ładowania polubionych kolekcji:', error);
+      }
+    };
+    
+    const changeLikedPage = (delta) => {
+      const newPage = likedPagination.value.page + delta;
+      if (newPage > 0 && newPage <= likedPagination.value.pages) {
+        loadLikedCollections(newPage);
+      }
+    };
+    
+    const toggleProfileVisibility = async () => {
+      try {
+        isSavingVisibility.value = true;
+        const newValue = !isProfilePublic.value;
+        await AuthService.updateProfileVisibility(newValue);
+        isProfilePublic.value = newValue;
+        
+        // Zaktualizuj user w store
+        store.commit('auth/UPDATE_USER', { isProfilePublic: newValue });
+        
+        toast.success(newValue ? 'Profil jest teraz publiczny' : 'Profil jest teraz ukryty');
+      } catch (error) {
+        console.error('Błąd zmiany widoczności:', error);
+        toast.error('Nie udało się zmienić ustawienia');
+      } finally {
+        isSavingVisibility.value = false;
       }
     };
     
@@ -324,10 +479,7 @@ export default {
         await AuthService.updateAvatar({ avatar: newAvatarUrl.value });
         
         // Zaktualizuj user w store
-        store.commit('auth/SET_USER', {
-          ...user.value,
-          avatar: newAvatarUrl.value
-        });
+        store.commit('auth/UPDATE_USER', { avatar: newAvatarUrl.value });
         
         toast.success("Avatar został zmieniony!");
         showAvatarModal.value = false;
@@ -337,6 +489,25 @@ export default {
         toast.error("Nie udało się zmienić avatara");
       } finally {
         isSavingAvatar.value = false;
+      }
+    };
+    
+    const deleteAccount = async () => {
+      try {
+        isDeletingAccount.value = true;
+        await AuthService.deleteAccount(deleteConfirmPassword.value);
+        
+        toast.success("Twoje konto zostało trwale usunięte");
+        
+        // Wyloguj i przekieruj
+        await store.dispatch("auth/logout");
+        router.push("/");
+      } catch (error) {
+        console.error("Błąd usuwania konta:", error);
+        const msg = getUserFriendlyErrorMessage(error, "Nie udało się usunąć konta");
+        toast.error(msg);
+      } finally {
+        isDeletingAccount.value = false;
       }
     };
 
@@ -420,8 +591,10 @@ export default {
       user,
       userInitials,
       stats,
-      recentCollections,
-      formatDate,
+      likedCollections,
+      likedPagination,
+      changeLikedPage,
+      formatRelativeTime,
       getImageUrl,
       passwordForm,
       passwordErrors,
@@ -433,7 +606,16 @@ export default {
       isSavingAvatar,
       saveAvatar,
       showPasswordModal,
-      closePasswordModal
+      closePasswordModal,
+      isProfilePublic,
+      isSavingVisibility,
+      toggleProfileVisibility,
+      showSettingsModal,
+      showDeleteConfirmation,
+      deleteConfirmPassword,
+      isDeletingAccount,
+      deleteAccount,
+      showFeedbackModal
     };
   }
 };

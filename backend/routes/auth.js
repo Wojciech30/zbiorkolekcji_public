@@ -133,7 +133,10 @@ router.post("/login", async (req, res) => {
                 email: user.email,
                 role: user.role,
                 isEmailVerified: user.isEmailVerified,
-                isActive: user.isActive
+                isActive: user.isActive,
+                avatar: user.avatar,
+                isProfilePublic: user.isProfilePublic,
+                createdAt: user.createdAt
             }
         });
     } catch (error) {
@@ -564,6 +567,45 @@ router.put("/update-avatar", authenticateToken, async (req, res) => {
     }
 });
 
+// ======================= AKTUALIZACJA WIDOCZNOŚCI PROFILU =======================
+router.put("/update-profile-visibility", authenticateToken, async (req, res) => {
+    try {
+        const { isProfilePublic } = req.body;
+
+        if (typeof isProfilePublic !== "boolean") {
+            return res.status(400).json({
+                code: "VISIBILITY_INVALID",
+                message: "Pole isProfilePublic musi być wartością true/false"
+            });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({
+                code: "USER_NOT_FOUND",
+                message: "Użytkownik nie został znaleziony"
+            });
+        }
+
+        user.isProfilePublic = isProfilePublic;
+        await user.save();
+
+        res.json({
+            code: "VISIBILITY_UPDATED",
+            message: isProfilePublic 
+                ? "Twój profil jest teraz publiczny" 
+                : "Twój profil jest teraz ukryty",
+            isProfilePublic: user.isProfilePublic
+        });
+    } catch (error) {
+        console.error("Update profile visibility error:", error);
+        res.status(500).json({
+            code: "SERVER_ERROR",
+            message: ERROR_MESSAGES.SERVER_ERROR
+        });
+    }
+});
+
 // ======================= REFRESH TOKEN =======================
 router.post("/refresh", async (req, res) => {
     try {
@@ -631,6 +673,62 @@ router.post("/logout", (req, res) => {
         code: "LOGOUT_SUCCESS",
         message: "Wylogowano pomyślnie"
     });
+});
+
+// ======================= HARD DELETE ACCOUNT =======================
+router.delete("/delete-account", authenticateToken, async (req, res) => {
+    try {
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({
+                code: "PASSWORD_REQUIRED",
+                message: "Hasło jest wymagane do usunięcia konta"
+            });
+        }
+
+        const user = await User.findById(req.user._id).select("+password");
+        if (!user) {
+            return res.status(404).json({
+                code: "USER_NOT_FOUND",
+                message: "Użytkownik nie został znaleziony"
+            });
+        }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(400).json({
+                code: "INVALID_PASSWORD",
+                message: "Nieprawidłowe hasło"
+            });
+        }
+
+        // Import models for cascade delete
+        const Collection = (await import("../models/Collection.js")).default;
+        const Item = (await import("../models/Item.js")).default;
+
+        // Delete all user's items
+        const userCollections = await Collection.find({ owner: user._id }).select("_id");
+        const collectionIds = userCollections.map(c => c._id);
+        await Item.deleteMany({ parentCollection: { $in: collectionIds } });
+
+        // Delete all user's collections
+        await Collection.deleteMany({ owner: user._id });
+
+        // Delete the user
+        await User.findByIdAndDelete(user._id);
+
+        res.json({
+            code: "ACCOUNT_DELETED",
+            message: "Twoje konto zostało trwale usunięte"
+        });
+    } catch (error) {
+        console.error("Delete account error:", error);
+        res.status(500).json({
+            code: "SERVER_ERROR",
+            message: ERROR_MESSAGES.SERVER_ERROR
+        });
+    }
 });
 
 export default router;

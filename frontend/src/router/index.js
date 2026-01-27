@@ -79,6 +79,13 @@ const routes = [
         props: true
     },
     {
+        path: "/users/:id",
+        name: "UserProfile",
+        component: () => import("@/views/UserProfileView.vue"),
+        meta: { access: "public" },
+        props: true
+    },
+    {
         path: "/admin",
         name: "AdminPanel",
         component: () => import("@/views/AdminPanelView.vue"),

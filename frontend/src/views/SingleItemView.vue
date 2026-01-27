@@ -1,111 +1,221 @@
 <template>
-  <div class="container mx-auto p-4">
-    <div v-if="isLoading" class="text-center py-8">
-      Ładowanie danych...
+  <div class="container mx-auto p-4 max-w-6xl">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex justify-center items-center py-20">
+      <AppSpinner class="w-12 h-12 text-blue-600" />
     </div>
 
-    <div v-else-if="!item">
-      <p>Nie znaleziono przedmiotu.</p>
+    <!-- Error State -->
+    <div v-else-if="!item" class="text-center py-20 bg-white rounded-xl shadow-sm">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+        <ExclamationCircleIcon class="w-8 h-8 text-gray-400" />
+      </div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Nie znaleziono przedmiotu</h2>
+      <p class="text-gray-500 mb-6">Przedmiot, którego szukasz, nie istnieje lub został usunięty.</p>
+      <router-link :to="{ name: 'Home' }" class="btn-primary inline-flex items-center">
+        Wróć do strony głównej
+      </router-link>
     </div>
 
+    <!-- Content -->
     <div v-else>
-      <header class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-800">{{ item.name }}</h1>
-        <p class="text-gray-600 mt-2">{{ item.description }}</p>
-      </header>
-
-      <div class="mb-6">
-        <img
-          :src="mainImageUrl"
-          alt="Zdjęcie przedmiotu"
-          class="w-full max-w-md mx-auto rounded"
-        />
-      </div>
-
-      <div class="mb-6">
-        <p><strong>Kategoria:</strong> {{ item.category?.name || "Brak kategorii" }}</p>
-        <p><strong>Kolekcja:</strong> {{ item.parentCollection?.name || "Brak kolekcji" }}</p>
-        <p><strong>Właściciel:</strong> {{ item.createdBy?.username || "Nieznany" }}</p>
-      </div>
-
-      <div class="mb-6">
-        <h2 class="text-2xl font-semibold mb-4">Atrybuty</h2>
-        <ul v-if="item.attributes && Object.keys(item.attributes).length">
-          <li v-for="(attr, key) in item.attributes" :key="key" class="mb-2">
-            <strong>{{ key }}:</strong> {{ attr?.value ?? attr }}
-          </li>
-        </ul>
-        <p v-else class="text-gray-500">Brak atrybutów.</p>
-      </div>
-
-      <!-- Polubienia -->
-      <div class="mb-6 flex items-center gap-4">
-        <button
-          @click="toggleLike"
-          :disabled="isLiking"
-          class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors cursor-pointer"
-          :class="hasLiked 
-            ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+      <!-- Breadcrumbs / Navigation -->
+      <nav class="flex text-sm text-gray-500 mb-6 space-x-2 items-center">
+        <router-link :to="{ name: 'Home' }" class="hover:text-blue-600 transition-colors">Główna</router-link>
+        <span>/</span>
+        <router-link 
+          v-if="item.parentCollection" 
+          :to="{ name: 'SingleCollection', params: { id: item.parentCollection._id || item.parentCollection.id } }" 
+          class="hover:text-blue-600 transition-colors font-medium text-gray-700"
         >
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
-          </svg>
-          <span>{{ likesCount }}</span>
-        </button>
-        <span v-if="!isAuthenticated" class="text-sm text-gray-500">
-          Zaloguj się, aby polubić
-        </span>
-      </div>
+          {{ item.parentCollection.name }}
+        </router-link>
+        <span v-else class="text-gray-400">Kolekcja</span>
+        <span>/</span>
+        <span class="text-gray-900 font-semibold truncate">{{ item.name }}</span>
+      </nav>
 
-      <!-- Komentarze -->
-      <div class="mb-6">
-        <h2 class="text-2xl font-semibold mb-4">Komentarze ({{ comments.length }})</h2>
-
-        <!-- Formularz dodawania komentarza -->
-        <div v-if="isAuthenticated" class="mb-4">
-          <textarea
-            v-model="newComment"
-            placeholder="Napisz komentarz..."
-            class="w-full p-3 border rounded-lg resize-none"
-            rows="3"
-          ></textarea>
-          <button
-            @click="addComment"
-            :disabled="!newComment.trim() || isAddingComment"
-            class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {{ isAddingComment ? 'Dodawanie...' : 'Dodaj komentarz' }}
-          </button>
-        </div>
-        <p v-else class="text-sm text-gray-500 mb-4">
-          Zaloguj się, aby dodać komentarz
-        </p>
-
-        <!-- Lista komentarzy -->
-        <div v-if="comments.length === 0" class="text-gray-500">
-          Brak komentarzy
-        </div>
-        <div v-else class="space-y-4">
-          <div
-            v-for="comment in comments"
-            :key="comment._id"
-            class="p-4 bg-gray-50 rounded-lg"
-          >
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="font-semibold text-gray-800">{{ comment.user?.username || 'Anonim' }}</p>
-                <p class="text-xs text-gray-500">{{ formatDate(comment.createdAt) }}</p>
-              </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column: Image -->
+        <div class="lg:col-span-1">
+          <div class="bg-white rounded-2xl shadow-lg overflow-hidden sticky top-6">
+            <div class="relative aspect-square bg-gray-100">
+              <img
+                :src="mainImageUrl"
+                :alt="item.name"
+                class="w-full h-full object-cover"
+                @error="$event.target.src = '/placeholder-collection.svg'"
+              />
+              
+              <!-- Like Button Overlay (Mobile) -->
               <button
-                v-if="canDeleteComment(comment)"
-                @click="deleteComment(comment._id)"
-                class="text-red-500 hover:text-red-700 text-sm"
+                @click="toggleLike"
+                :disabled="isLiking"
+                class="absolute top-4 right-4 p-3 rounded-full bg-white/90 backdrop-blur-sm shadow-md hover:bg-white transition-all transform hover:scale-105 active:scale-95 lg:hidden"
+                :class="hasLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'"
               >
-                Usuń
+                <HeartIcon v-if="!hasLiked" class="w-6 h-6" />
+                <HeartSolidIcon v-else class="w-6 h-6" />
               </button>
             </div>
-            <p class="mt-2 text-gray-700">{{ comment.text }}</p>
+            
+            <div class="p-6 border-t border-gray-100">
+              <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                <div class="flex items-center gap-2">
+                  <UserCircleIcon class="w-5 h-5" />
+                  <span>{{ item.createdBy?.username || "Nieznany" }}</span>
+                </div>
+                <div class="flex items-center gap-2" v-if="item.createdAt">
+                  <CalendarDaysIcon class="w-5 h-5" />
+                  <span>{{ formatDate(item.createdAt) }}</span>
+                </div>
+              </div>
+              
+              <!-- Actions (Desktop) -->
+              <div class="flex gap-3 mt-4">
+                <button
+                  @click="toggleLike"
+                  :disabled="isLiking"
+                  class="flex-1 btn-white flex items-center justify-center gap-2 group border border-gray-200 hover:border-red-200 hover:bg-red-50 transition-colors"
+                >
+                  <HeartIcon v-if="!hasLiked" class="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" />
+                  <HeartSolidIcon v-else class="w-5 h-5 text-red-500" />
+                  <span :class="hasLiked ? 'text-red-600' : 'text-gray-600 group-hover:text-red-600'">
+                    {{ likesCount }} {{ likesCount === 1 ? 'polubienie' : (likesCount > 1 && likesCount < 5 ? 'polubienia' : 'polubień') }}
+                  </span>
+                </button>
+                
+                <button
+                  @click="shareItem"
+                  class="btn-white px-4 border border-gray-200 hover:border-blue-200 hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
+                  title="Udostępnij"
+                >
+                  <ShareIcon class="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Details & Comments -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- Item Details -->
+          <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
+            <div class="border-b border-gray-100 pb-6 mb-6">
+              <div class="flex items-start justify-between">
+                <div>
+                   <span v-if="item.category" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-3">
+                    {{ item.category.name }}
+                  </span>
+                  <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">{{ item.name }}</h1>
+                </div>
+              </div>
+              <p class="text-gray-600 text-lg leading-relaxed">{{ item.description || "Brak opisu przedmiotu." }}</p>
+            </div>
+
+            <!-- Attributes -->
+            <div v-if="item.attributes && Object.keys(item.attributes).length > 0">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <TagIcon class="w-5 h-5 text-blue-500" />
+                Cechy przedmiotu
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div 
+                  v-for="(attr, key) in item.attributes" 
+                  :key="key" 
+                  class="bg-gray-50 rounded-lg p-3 flex flex-col hover:bg-gray-100 transition-colors"
+                >
+                  <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">{{ key }}</span>
+                  <span class="text-gray-800 font-medium">{{ formatAttribute(attr?.value ?? attr) }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <p class="text-gray-500 text-sm">Ten przedmiot nie posiada dodatkowych atrybutów.</p>
+            </div>
+          </div>
+
+          <!-- Comments Section -->
+          <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <ChatBubbleLeftRightIcon class="w-6 h-6 text-purple-500" />
+              Komentarze <span class="text-gray-400 font-normal">({{ comments.length }})</span>
+            </h3>
+
+            <!-- Add Comment Form -->
+            <div v-if="isAuthenticated" class="mb-8 flex gap-4">
+              <div class="flex-shrink-0">
+                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
+                  {{ userInitials }}
+                </div>
+              </div>
+              <div class="flex-grow">
+                <div class="relative">
+                  <textarea
+                    v-model="newComment"
+                    placeholder="Podziel się swoją opinią..."
+                    class="w-full p-4 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow min-h-[100px]"
+                    rows="3"
+                  ></textarea>
+                </div>
+                <div class="flex justify-end mt-2">
+                  <button
+                    @click="addComment"
+                    :disabled="!newComment.trim() || isAddingComment"
+                    class="btn-primary"
+                  >
+                    {{ isAddingComment ? 'Dodawanie...' : 'Opublikuj komentarz' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="mb-8 p-6 bg-blue-50 rounded-xl text-center">
+              <p class="text-blue-800">
+                <router-link :to="{ name: 'Login', query: { redirect: route.fullPath } }" class="font-bold underline hover:text-blue-900">Zaloguj się</router-link>, aby dodać komentarz.
+              </p>
+            </div>
+
+            <!-- Comments List -->
+            <div class="space-y-6">
+              <div v-if="comments.length === 0" class="text-center py-8 text-gray-400 italic">
+                Brak komentarzy. Bądź pierwszy!
+              </div>
+              
+              <transition-group name="list">
+                <div
+                  v-for="comment in comments"
+                  :key="comment._id"
+                  class="flex gap-4 group"
+                >
+                  <div class="flex-shrink-0">
+                    <div v-if="comment.user?.avatar" class="w-10 h-10 rounded-full overflow-hidden">
+                       <img :src="getImageUrl(comment.user.avatar)" class="w-full h-full object-cover" />
+                    </div>
+                    <div v-else class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold">
+                      {{ comment.user?.username?.substring(0,2)?.toUpperCase() || '?' }}
+                    </div>
+                  </div>
+                  
+                  <div class="flex-grow bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                      <div>
+                        <span class="font-bold text-gray-900 mr-2">{{ comment.user?.username || 'Anonim' }}</span>
+                        <span class="text-xs text-gray-500">{{ formatDate(comment.createdAt) }}</span>
+                      </div>
+                      <button
+                        v-if="canDeleteComment(comment)"
+                        @click="deleteComment(comment._id)"
+                        class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Usuń komentarz"
+                      >
+                         <TrashIcon class="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p class="text-gray-700 whitespace-pre-line text-sm sm:text-base leading-relaxed">{{ comment.text }}</p>
+                  </div>
+                </div>
+              </transition-group>
+            </div>
           </div>
         </div>
       </div>
@@ -119,9 +229,35 @@ import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useStore } from "vuex";
 import ItemService from "@/services/ItemService";
+import AppSpinner from "@/components/AppSpinner.vue";
+import { getImageUrl } from "@/utils/imageUrl";
+import { formatDate } from "@/utils/dateUtils";
+import { 
+  HeartIcon, 
+  ShareIcon, 
+  UserCircleIcon, 
+  CalendarDaysIcon, 
+  TagIcon, 
+  ChatBubbleLeftRightIcon, 
+  ExclamationCircleIcon,
+  TrashIcon
+} from "@heroicons/vue/24/outline";
+import { HeartIcon as HeartSolidIcon } from "@heroicons/vue/24/solid";
 
 export default {
   name: "SingleItemView",
+  components: {
+    AppSpinner,
+    HeartIcon,
+    HeartSolidIcon,
+    ShareIcon,
+    UserCircleIcon,
+    CalendarDaysIcon,
+    TagIcon,
+    ChatBubbleLeftRightIcon,
+    ExclamationCircleIcon,
+    TrashIcon
+  },
   setup() {
     const route = useRoute();
     const router = useRouter();
@@ -139,28 +275,31 @@ export default {
 
     const isAuthenticated = computed(() => store.getters["auth/isAuthenticated"]);
     const currentUser = computed(() => store.state.auth.user);
+    const userInitials = computed(() => {
+        if (!currentUser.value?.username) return '?';
+        return currentUser.value.username.slice(0, 2).toUpperCase();
+    });
 
     const mainImageUrl = computed(() => {
       const images = item.value?.images;
-      if (Array.isArray(images) && images.length > 0 && images[0]) {
-        return images[0];
-      }
-      if (item.value?.imageUrl) {
-        return item.value.imageUrl;
-      }
-      return "/placeholder.png";
+      // Handle both backend image structure (uploads/...) and external URLs
+      const img = (Array.isArray(images) && images.length > 0 && images[0]) 
+                  ? images[0] 
+                  : item.value?.imageUrl;
+      
+      if (!img) return "/placeholder-collection.svg";
+      return getImageUrl(img);
     });
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleString('pl-PL', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+    // formatDate imported from dateUtils
+
+    const formatAttribute = (value) => {
+      // Check if value matches YYYY-MM-DD format
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (typeof value === 'string' && dateRegex.test(value)) {
+        return formatDate(value);
+      }
+      return value;
     };
 
     const loadItem = async () => {
@@ -203,6 +342,11 @@ export default {
         const response = await ItemService.toggleLike(route.params.id);
         hasLiked.value = response.data.liked;
         likesCount.value = response.data.likesCount;
+        
+        // Update item in local state
+        if (hasLiked.value) {
+             toast.success("Polubiono przedmiot!");
+        }
       } catch (error) {
         console.error("Błąd polubienia:", error);
         toast.error("Nie udało się zaktualizować polubienia");
@@ -211,13 +355,69 @@ export default {
       }
     };
 
+    const shareItem = () => {
+      // Create share logic consistent with CollectionsView
+      const url = window.location.href;
+      
+      try {
+          // Try native share API first
+          if (navigator.share) {
+              navigator.share({
+                  title: item.value.name,
+                  text: `Zobacz ${item.value.name} w aplikacji Zbiór Kolekcji!`,
+                  url: url
+              }).catch((e) => console.log('Udostępnianie anulowane', e));
+          } else {
+              // Fallback to clipboard
+              copyToClipboard(url);
+          }
+      } catch (e) {
+         copyToClipboard(url);
+      }
+    };
+
+    const copyToClipboard = (text) => {
+        // Fallback for non-secure contexts or browsers without clipboard API
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                toast.success("Link skopiowany do schowka!");
+            }).catch(() => {
+                 fallbackCopy(text);
+            });
+        } else {
+             fallbackCopy(text);
+        }
+    };
+    
+    const fallbackCopy = (text) => {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                toast.success("Link skopiowany do schowka!");
+            } else {
+                 prompt("Skopiuj link:", text);
+            }
+        } catch (err) {
+            prompt("Skopiuj link:", text);
+        }
+    };
+
     const addComment = async () => {
       if (!newComment.value.trim() || isAddingComment.value) return;
 
       try {
         isAddingComment.value = true;
         const response = await ItemService.addComment(route.params.id, newComment.value);
-        comments.value.push(response.data.comment);
+        comments.value.unshift(response.data.comment); // Add to top
         newComment.value = "";
         toast.success("Komentarz dodany");
       } catch (error) {
@@ -229,6 +429,8 @@ export default {
     };
 
     const deleteComment = async (commentId) => {
+      if(!confirm("Czy na pewno chcesz usunąć ten komentarz?")) return;
+      
       try {
         await ItemService.deleteComment(route.params.id, commentId);
         comments.value = comments.value.filter(c => c._id !== commentId);
@@ -244,7 +446,10 @@ export default {
       const userId = currentUser.value?.id || currentUser.value?._id;
       const isAuthor = comment.user?._id === userId || comment.user?.id === userId;
       const isAdmin = currentUser.value?.role === "admin";
-      return isAuthor || isAdmin;
+      // Also check if user is the collection owner (backend allows owner, author, or admin)
+      const collectionOwnerId = item.value?.parentCollection?.owner?._id || item.value?.parentCollection?.owner;
+      const isCollectionOwner = collectionOwnerId && (collectionOwnerId === userId || collectionOwnerId.toString?.() === userId);
+      return isAuthor || isAdmin || isCollectionOwner;
     };
 
     onMounted(async () => {
@@ -263,8 +468,13 @@ export default {
       isLiking,
       likesCount,
       hasLiked,
+      userInitials,
+      route,
       formatDate,
+      formatAttribute,
+      getImageUrl,
       toggleLike,
+      shareItem,
       addComment,
       deleteComment,
       canDeleteComment
@@ -274,11 +484,22 @@ export default {
 </script>
 
 <style scoped>
-.container {
-  max-width: 800px;
+.btn-primary {
+  @apply bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center;
 }
-img {
-  max-width: 100%;
-  height: auto;
+
+.btn-white {
+  @apply bg-white rounded-lg py-2 font-medium transition-all shadow-sm active:scale-95;
+}
+
+/* List transition */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 </style>

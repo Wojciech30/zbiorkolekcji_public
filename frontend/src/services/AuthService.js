@@ -47,5 +47,13 @@ export default {
     updateAvatar(avatarData) {
         return apiClient.put('/auth/update-avatar', avatarData)
             .then(r => r.data);
+    },
+    updateProfileVisibility(isProfilePublic) {
+        return apiClient.put('/auth/update-profile-visibility', { isProfilePublic })
+            .then(r => r.data);
+    },
+    deleteAccount(password) {
+        return apiClient.delete('/auth/delete-account', { data: { password } })
+            .then(r => r.data);
     }
 };

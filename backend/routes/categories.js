@@ -48,10 +48,19 @@ router.get("/", async (req, res) => {
             .sort("-createdAt")
             .lean();
 
+        // Add public collections count for each category
+        const categoriesWithCounts = await Promise.all(categories.map(async (category) => {
+            const publicCollectionsCount = await Collection.countDocuments({
+                category: category._id,
+                privacy: 'public'
+            });
+            return { ...category, publicCollectionsCount };
+        }));
+
         res.json({
             code: "CATEGORIES_FETCHED",
-            count: categories.length,
-            categories
+            count: categoriesWithCounts.length,
+            categories: categoriesWithCounts
         });
     } catch (error) {
         handleError(res, error, "Błąd pobierania kategorii");
