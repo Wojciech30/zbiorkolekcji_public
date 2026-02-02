@@ -1,16 +1,24 @@
 {
+  "type": "module",
   "dependencies": {
+    "bcrypt": "^5.1.1",
+    "caniuse-lite": "^1.0.30001757",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.13.0",
+    "mongoose": "^8.9.5",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "baseline-browser-mapping": "^2.9.18",
+    "concurrently": "^9.1.0",
+    "maildev": "^2.1.0"
   },
   "scripts": {
     "build:css": "tailwindcss build src/tailwind.css -o public/tailwind.css --minify",
-    "start": "concurrently \"npm run serve --prefix frontend\" \"node backend/server.js\""
+    "start": "concurrently \"npm run serve --prefix frontend\" \"node backend/server.js\"",
+    "start:dev": "concurrently \"maildev\" \"npm run serve --prefix frontend\" \"node backend/server.js\"",
+    "setup": "node scripts/setup.js"
   }
 }

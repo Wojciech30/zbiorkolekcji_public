@@ -1,3 +1,10 @@
+<!--
+  @component AppSpinner
+  @description Prosty spinner ładowania używany podczas oczekiwania na dane.
+  
+  @example
+  <AppSpinner />
+-->
 <template>
   <div class="spinner"></div>
 </template>

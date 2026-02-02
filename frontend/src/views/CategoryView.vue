@@ -1,16 +1,20 @@
+<!--
+  @view CategoryView
+  @description Widok kategorii z listą jej kolekcji.
+  Wyświetla: nagłówek kategorii, publiczne kolekcje w tej kategorii.
+-->
 <template>
   <div class="container mx-auto p-4">
-    <header>
+    <header class="mb-8">
       <h1 class="text-4xl font-bold text-gray-800 mb-2">{{ category.name }}</h1>
       <p class="text-gray-600 text-lg italic" v-if="category.description">{{ category.description }}</p>
-      <p class="text-gray-500 text-sm" v-else>Brak opisu kategorii</p>
     </header>
 
     <section class="mt-8">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-semibold text-gray-700">
           Kolekcje w tej kategorii
-          <span class="text-gray-500 text-lg">({{ collections.length }})</span>
+          <span class="text-gray-500 text-lg">({{ pagination.total }})</span>
         </h2>
 
         <!-- Paginacja -->
@@ -48,36 +52,15 @@
 
       <!-- Lista kolekcji -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div
-            v-for="collection in collections"
-            :key="collection._id"
-            class="p-6 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white"
-        >
-          <router-link
-              :to="`/collections/${collection._id}`"
-              class="block group"
-          >
-            <div class="mb-4 relative">
-              <img
-                  :src="collection.coverImage || '/placeholder-collection.jpg'"
-                  alt="Okładka kolekcji"
-                  class="w-full h-48 object-cover rounded-lg mb-3"
-              >
-            </div>
-
-            <h3 class="text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition">
-              {{ collection.name }}
-            </h3>
-            <p class="text-gray-600 mt-2 line-clamp-2">{{ collection.description }}</p>
-
-            <div class="mt-4 flex items-center text-sm text-gray-500">
-              <span class="mx-2">•</span>
-              <time :datetime="collection.createdAt">
-                {{ formatDate(collection.createdAt) }}
-              </time>
-            </div>
-          </router-link>
-        </div>
+        <CollectionCard
+          v-for="collection in sortedCollections"
+          :key="collection._id"
+          :data="collection"
+          type="collection"
+          :showStats="true"
+          :showOwner="true"
+          :hideBadge="true"
+        />
       </div>
     </section>
   </div>
@@ -85,13 +68,21 @@
 
 <script>
 import CategoryService from '@/services/CategoryService'
+import CollectionCard from '@/components/CollectionCard.vue'
+import { formatDate } from '@/utils/dateUtils'
 
 export default {
+  name: "CategoryView",
+  components: {
+    CollectionCard
+  },
   data() {
     return {
+      // Dane kategorii
       category: {},
       collections: [],
       isLoading: true,
+      // Paginacja kolekcji
       pagination: {
         page: 1,
         limit: 9,
@@ -106,7 +97,14 @@ export default {
       immediate: true
     }
   },
+  computed: {
+    // Sortowanie kolekcji wg wyświetleń (malejąco)
+    sortedCollections() {
+      return [...this.collections].sort((a, b) => (b.views || 0) - (a.views || 0))
+    }
+  },
   methods: {
+    // Ładowanie danych kategorii i jej kolekcji
     async loadData() {
       try {
         this.isLoading = true
@@ -118,6 +116,7 @@ export default {
           return this.$router.push('/').catch(() => {})
         }
 
+        // Równoległe ładowanie kategorii i jej kolekcji
         const [categoryRes, collectionsRes] = await Promise.all([
           CategoryService.getCategory(categoryId),
           CategoryService.getCategoryCollections(categoryId, {
@@ -126,12 +125,12 @@ export default {
           })
         ])
 
-        if (!categoryRes?.data?.data || !collectionsRes?.data?.data?.collections) {
+        if (!categoryRes?.data?.category || !collectionsRes?.data?.collections) {
           throw new Error('Nieprawidłowa struktura odpowiedzi API')
         }
 
-        this.category = categoryRes.data.data
-        this.collections = collectionsRes.data.data.collections
+        this.category = categoryRes.data.category
+        this.collections = collectionsRes.data.collections
         this.pagination = {
           ...this.pagination,
           total: collectionsRes.data.pagination?.total || 0,
@@ -144,16 +143,15 @@ export default {
         this.isLoading = false
       }
     },
+    // Walidacja formatu MongoDB ObjectId
     validateCategoryId(id) {
       return /^[0-9a-fA-F]{24}$/.test(id)
     },
+    // formatDate zaimportowane z dateUtils
     formatDate(isoString) {
-      return new Date(isoString).toLocaleDateString('pl-PL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+      return formatDate(isoString);
     },
+    // Zmiana strony paginacji
     changePage(delta) {
       const newPage = this.pagination.page + delta
       if (newPage > 0 && newPage <= this.pagination.pages) {
@@ -161,6 +159,7 @@ export default {
         this.loadData()
       }
     },
+    // Obsługa błędów API
     handleError(error) {
       console.error('Błąd:', error)
 
@@ -179,13 +178,6 @@ export default {
 </script>
 
 <style scoped>
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
 .animate-spin {
   animation: spin 1s linear infinite;

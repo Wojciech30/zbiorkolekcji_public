@@ -1,11 +1,39 @@
+/**
+ * @fileoverview Routes kategorii
+ * @description Endpointy zarządzania kategoriami kolekcji.
+ * Kategorie definiują schemat atrybutów dla przedmiotów.
+ * 
+ * @module routes/categories
+ * 
+ * @routes
+ * POST   /                 - Utwórz kategorię (Admin only)
+ * GET    /                 - Lista kategorii (z liczbą kolekcji)
+ * GET    /:id              - Szczegóły kategorii
+ * PUT    /:id              - Aktualizuj kategorię (Admin only)
+ * DELETE /:id              - Usuń kategorię (Admin only, jeśli brak kolekcji)
+ * GET    /:id/collections  - Publiczne kolekcje w kategorii
+ * 
+ * @access
+ * - Odczyt: Publiczny
+ * - Zapis: Tylko administratorzy
+ */
+
 import express from "express";
 import Category from "../models/Category.js";
 import Collection from "../models/Collection.js";
+import Item from "../models/Item.js";
 import authenticateToken from "../middleware/authenticateToken.js";
 import checkAdmin from "../middleware/checkAdmin.js";
 import mongoose from "mongoose";
 
 const router = express.Router();
+
+/**
+ * Obsługa błędów z walidacją Mongoose
+ * @param {Object} res - Response object
+ * @param {Error} error - Błąd
+ * @param {string} defaultMessage - Domyślny komunikat
+ */
 
 const handleError = (res, error, defaultMessage) => {
     console.error(error);
@@ -47,10 +75,19 @@ router.get("/", async (req, res) => {
             .sort("-createdAt")
             .lean();
 
+        // Add public collections count for each category
+        const categoriesWithCounts = await Promise.all(categories.map(async (category) => {
+            const publicCollectionsCount = await Collection.countDocuments({
+                category: category._id,
+                privacy: 'public'
+            });
+            return { ...category, publicCollectionsCount };
+        }));
+
         res.json({
             code: "CATEGORIES_FETCHED",
-            count: categories.length,
-            categories
+            count: categoriesWithCounts.length,
+            categories: categoriesWithCounts
         });
     } catch (error) {
         handleError(res, error, "Błąd pobierania kategorii");
@@ -80,7 +117,7 @@ router.get("/:id", async (req, res) => {
         res.json({
             code: "CATEGORY_FETCHED",
             message: "Pomyślnie pobrano kategorię",
-            data: {
+            category: {
                 _id: category._id,
                 name: category.name,
                 description: category.description,
@@ -172,17 +209,20 @@ router.get('/:id/collections', async (req, res) => {
             })
         ]);
 
+        const collectionsWithCounts = await Promise.all(collections.map(async (col) => {
+            const itemsCount = await Item.countDocuments({ collectionId: col._id });
+            return { ...col, itemsCount, likesCount: col.likes?.length || 0 };
+        }));
+
         res.json({
             code: 'CATEGORY_COLLECTIONS_FETCHED',
             message: 'Pomyślnie pobrano kolekcje kategorii',
-            data: {
-                category: {
-                    _id: category._id,
-                    name: category.name,
-                    description: category.description
-                },
-                collections
+            category: {
+                _id: category._id,
+                name: category.name,
+                description: category.description
             },
+            collections: collectionsWithCounts,
             pagination: {
                 total,
                 page,

@@ -1,10 +1,12 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
-import store from './store'; // Import Vuex
-import './assets/tailwind.css'; // Tailwind CSS
+import store from './store';
+import './assets/tailwind.css';
 import { configure } from 'vee-validate';
 import Toaster from '@meforma/vue-toaster';
+import Toast from 'vue-toastification';
+import 'vue-toastification/dist/index.css';
 
 configure({
     generateMessage: (ctx) => {
@@ -20,4 +22,6 @@ createApp(App)
     .use(router)
     .use(store)
     .use(Toaster)
+    .use(Toast)
     .mount('#app');
+
