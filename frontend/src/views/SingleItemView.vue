@@ -182,7 +182,7 @@
             </div>
 
             <!-- Lista komentarzy -->
-            <div class="space-y-6">
+            <div class="space-y-6 text-left">
               <div v-if="comments.length === 0" class="text-center py-8 text-gray-400 italic">
                 Brak komentarzy. Bądź pierwszy!
               </div>

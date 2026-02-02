@@ -65,10 +65,14 @@ apiClient.interceptors.response.use(
         const isAuthLogin = url.includes("/auth/login");
         const isAuthRegister = url.includes("/auth/register");
         const isAuthRefresh = url.includes("/auth/refresh");
+        
+        // Sprawdź czy użytkownik jest zalogowany (ma refreshToken)
+        const hasRefreshToken = !!store.state.auth?.refreshToken;
 
-        // Automatyczne odświeżanie tokena przy 401
+        // Automatyczne odświeżanie tokena przy 401 (tylko dla zalogowanych)
         if (
             status === 401 &&
+            hasRefreshToken &&
             !originalRequest._retry &&
             !isAuthLogin &&
             !isAuthRegister &&

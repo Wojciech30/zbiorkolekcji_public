@@ -209,7 +209,7 @@
         </div>
 
         <!-- Lista komentarzy -->
-        <div class="space-y-6">
+        <div class="space-y-6 text-left">
           <div v-if="collectionComments.length === 0" class="text-center py-8 text-gray-400 italic">
             Brak komentarzy. Bądź pierwszy!
           </div>
@@ -513,7 +513,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import store from "@/store";
@@ -627,6 +627,15 @@ export default {
         }
       } catch (error) {
         console.error("Błąd ładowania kolekcji", error);
+        
+        // Redirect na 404 przy braku dostępu lub nieistniejącej kolekcji
+        const status = error.response?.status;
+        // 400 = invalid ID, 401 = unauthorized, 403 = forbidden, 404 = not found
+        if (status === 400 || status === 401 || status === 403 || status === 404) {
+          router.replace({ name: 'NotFound' });
+          return;
+        }
+        
         toast.error("Nie udało się pobrać kolekcji");
       }
     };
@@ -1008,6 +1017,18 @@ export default {
       await loadItems();
       incrementViews();
       loadCollectionComments();
+    });
+
+    // Reload data when route params change
+    watch(() => route.params.id, async (newId) => {
+      if (newId) {
+        isLoading.value = true;
+        collection.value = {};
+        items.value = [];
+        await loadCollection();
+        await loadItems();
+        loadCollectionComments();
+      }
     });
 
     return {
