@@ -1,5 +1,4 @@
-import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import { createRequire } from "module";
 import readline from "readline";
 import dotenv from "dotenv";
 import path from "path";
@@ -7,6 +6,10 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, "../backend/.env") });
+
+// Import mongoose z backend/node_modules żeby używać tej samej instancji co User model
+const require = createRequire(path.join(__dirname, "../backend/"));
+const mongoose = require("mongoose");
 
 // Dynamiczny import modelu User
 const User = (await import("../backend/models/User.js")).default;
@@ -65,13 +68,11 @@ async function setup() {
             process.exit(1);
         }
 
-        // Tworzenie admina
-        const hashedPassword = await bcrypt.hash(password, 10);
-
+        // Tworzenie admina (hasło będzie zahashowane przez pre-save hook w User model)
         const admin = await User.create({
             username,
             email,
-            password: hashedPassword,
+            password,
             role: "admin",
             isActive: true,
             isEmailVerified: true

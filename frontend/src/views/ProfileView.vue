@@ -9,18 +9,18 @@
     <!-- Header z danymi użytkownika -->
     <header class="mb-8">
       <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center gap-6">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
           <!-- Awatar z możliwością zmiany -->
-          <div class="relative group">
+          <div class="relative group mx-auto sm:mx-0">
             <div 
               v-if="user?.avatar"
-              class="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg"
+              class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-white shadow-lg"
             >
               <img :src="getImageUrl(user.avatar)" alt="Avatar" class="w-full h-full object-cover" />
             </div>
             <div 
               v-else
-              class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg"
+              class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-lg"
             >
               {{ userInitials }}
             </div>
@@ -28,7 +28,7 @@
             <!-- Przycisk zmiany awatara -->
             <button
               @click="showAvatarModal = true"
-              class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -37,9 +37,9 @@
             </button>
           </div>
           
-          <div class="flex-grow">
-            <h1 class="text-3xl font-bold text-gray-800">{{ user?.username }}</h1>
-            <p class="text-gray-500">{{ user?.email }}</p>
+          <div class="flex-grow text-center sm:text-left">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">{{ user?.username }}</h1>
+            <p class="text-gray-500 text-sm sm:text-base">{{ user?.email }}</p>
             <p v-if="user?.createdAt" class="text-sm text-gray-400 mt-1">
               Na platformie od {{ formatRelativeTime(user?.createdAt) }}
             </p>
@@ -52,13 +52,15 @@
           </div>
           
           <!-- Ustawienia -->
-          <button
-            @click="showSettingsModal = true"
-            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Ustawienia konta"
-          >
-            <Cog6ToothIcon class="w-6 h-6" />
-          </button>
+          <div class="flex justify-center sm:justify-end">
+            <button
+              @click="showSettingsModal = true"
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Ustawienia konta"
+            >
+              <Cog6ToothIcon class="w-6 h-6" />
+            </button>
+          </div>
         </div>
       </div>
     </header>

@@ -240,7 +240,7 @@
                   <button
                     v-if="canDeleteCollectionComment(comment)"
                     @click="deleteCollectionComment(comment._id)"
-                    class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-50 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
                     title="Usuń komentarz"
                   >
                     <TrashIcon class="w-4 h-4" />
@@ -275,8 +275,8 @@
       </div>
     </section>
 
-   <!-- Modals (AddItem, AllowedUsers) and Script Logic remain, handled via replacement content -->
-    <!-- BaseModal for Adding/Editing Item -->
+    <!-- Modale (Dodawanie przedmiotu, Uprawnieni użytkownicy) -->
+    <!-- BaseModal do dodawania/edycji przedmiotu -->
     <BaseModal
       :show="showAddItemForm"
       :title="isEditingItem ? 'Edytuj przedmiot' : 'Dodaj przedmiot'"
@@ -345,7 +345,7 @@
                   :for="`attr-${attr.name}`"
                   class="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  {{ attr.name }}<span v-if="attr.required" class="text-red-500">*</span>
+                  {{ attr.name }}<span v-if="attr.required" class="text-gray-700">*</span>
                 </label>
 
                 <template v-if="attr.type === 'string' || attr.type === 'text'">
@@ -452,10 +452,6 @@
       @close="closeAllowedUsersModal"
     >
       <div>
-        <p class="text-sm text-gray-500 mb-4">
-          Dla kolekcji prywatnej: {{ collection.name }}
-        </p>
-
         <!-- Dodawanie użytkownika do listy dozwolonych -->
         <div class="flex-1 min-h-0 overflow-y-auto">
           <div class="mb-4">

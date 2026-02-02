@@ -46,7 +46,7 @@ if (isProduction) {
         }
     });
 } else {
-    // Development: MailDev lub MailHog (172.23.52.141:1025)
+    // Development: MailDev(172.23.52.141:1025)
     transporter = nodemailer.createTransport({
         host: process.env.MAILDEV_HOST || "172.23.52.141",
         port: parseInt(process.env.MAILDEV_PORT || "1025"),

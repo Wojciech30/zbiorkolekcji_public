@@ -60,8 +60,8 @@ const handleError = (res, error, defaultMessage) => {
 const loadCollectionWithCategory = async (collectionId) => {
   const collection = await Collection.findById(collectionId).populate("category");
   if (!collection) return null;
-  const category = await Category.findById(collection.category);
-  return { collection, category };
+  // Po populate, collection.category jest już obiektem Category
+  return { collection, category: collection.category };
 };
 
 const canReadCollection = (collection, user) => {
@@ -198,8 +198,9 @@ const validateAndBuildAttributes = (category, incomingAttributes, { mode, existi
     if (providedType && normalizeType(providedType) !== normalizedDefType) {
       errors.push(`Nieprawidłowy typ dla atrybutu '${key}'. Oczekiwano ${def.type}, otrzymano ${providedType}.`);
     }
-
-    const { ok, value, error } = castAndValidateValue({ ...def, type: normalizedDefType }, incoming.value);
+    // Konwertuj subdokument Mongoose na zwykły obiekt
+    const defObj = def.toObject ? def.toObject() : def;
+    const { ok, value, error } = castAndValidateValue({ ...defObj, type: normalizedDefType }, incoming.value);
     if (!ok) {
       errors.push(`Atrybut '${key}': ${error}`);
       continue;

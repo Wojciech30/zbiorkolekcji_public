@@ -152,16 +152,60 @@
 
       <!-- Zarządzanie kolekcjami -->
       <section class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Wszystkie kolekcje (tylko odczyt)</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <CollectionCard
-              v-for="collection in collections"
-              :key="collection._id"
-              :data="collection"
-              type="collection"
-              :showStats="true"
-              :showOwner="true"
-          />
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Zarządzanie kolekcjami</h2>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="p-3 text-sm font-semibold text-gray-700">Nazwa</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Właściciel</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Kategoria</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Prywatność</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Przedmioty</th>
+                <th class="p-3 text-sm font-semibold text-gray-700">Akcje</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                  v-for="collection in collections" 
+                  :key="collection._id"
+                  class="border-b border-gray-100 hover:bg-gray-50"
+              >
+                <td class="p-3">
+                  <router-link 
+                    :to="`/collections/${collection._id}`" 
+                    class="text-blue-600 hover:underline font-medium"
+                  >
+                    {{ collection.name }}
+                  </router-link>
+                </td>
+                <td class="p-3 text-gray-600">{{ collection.owner?.username || 'Nieznany' }}</td>
+                <td class="p-3 text-gray-600">{{ collection.category?.name || '-' }}</td>
+                <td class="p-3">
+                  <span 
+                    :class="collection.privacy === 'public' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'"
+                    class="px-2 py-1 rounded-full text-xs font-medium"
+                  >
+                    {{ collection.privacy === 'public' ? 'Publiczna' : 'Prywatna' }}
+                  </span>
+                </td>
+                <td class="p-3 text-gray-600">{{ collection.itemsCount || 0 }}</td>
+                <td class="p-3">
+                  <button
+                    @click="openDeleteCollectionModal(collection)"
+                    class="text-red-600 hover:text-red-800 transition-colors p-1"
+                    title="Usuń kolekcję"
+                    :disabled="isProcessing"
+                  >
+                    <TrashIcon class="w-5 h-5" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <!-- Paginacja kolekcji -->
@@ -214,6 +258,45 @@
                 :disabled="isProcessing"
             >
               <span v-if="!isProcessing">Tak, zablokuj</span>
+              <Spinner v-else class="w-5 h-5 mx-auto" />
+            </button>
+          </div>
+        </template>
+      </BaseModal>
+
+      <!-- Modal potwierdzenia usunięcia kolekcji -->
+      <BaseModal
+        :show="isDeleteCollectionModalOpen"
+        title="Potwierdź usunięcie kolekcji"
+        @close="closeDeleteCollectionModal"
+      >
+        <div>
+          <p class="text-gray-600 mb-2">
+            Czy na pewno chcesz usunąć kolekcję <strong>{{ collectionToDelete?.name }}</strong>?
+          </p>
+          <p class="text-sm text-gray-500 mb-2">
+            Właściciel: {{ collectionToDelete?.owner?.username || 'Nieznany' }}
+          </p>
+          <p class="text-red-600 text-sm mb-6">
+            ⚠️ Ta operacja jest nieodwracalna. Wszystkie przedmioty w kolekcji zostaną trwale usunięte.
+          </p>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <button
+                @click="closeDeleteCollectionModal"
+                class="btn-gray"
+                :disabled="isProcessing"
+            >
+              Anuluj
+            </button>
+            <button
+                @click="confirmDeleteCollection"
+                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                :disabled="isProcessing"
+            >
+              <span v-if="!isProcessing">Tak, usuń</span>
               <Spinner v-else class="w-5 h-5 mx-auto" />
             </button>
           </div>
@@ -449,18 +532,18 @@ import { useStore } from 'vuex'
 import { useToast } from 'vue-toastification'
 import CategoryService from '@/services/CategoryService'
 import AdminService from '@/services/AdminService'
+import CollectionService from '@/services/CollectionService'
 import Spinner from '@/components/AppSpinner.vue'
-import CollectionCard from '@/components/CollectionCard.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import { formatDateTime } from '@/utils/dateUtils'
-import { PlusIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
 export default {
   name: 'AdminPanelView',
   components: {
     Spinner,
     PlusIcon,
-    CollectionCard,
+    TrashIcon,
     BaseModal
   },
   setup() {
@@ -485,6 +568,10 @@ export default {
     // Modal blokady użytkownika
     const isBlockConfirmModalOpen = ref(false)
     const userToBlock = ref(null)
+
+    // Modal usuwania kolekcji
+    const isDeleteCollectionModalOpen = ref(false)
+    const collectionToDelete = ref(null)
 
     const attributeTypes = [
       { value: 'string', label: 'Tekst' },
@@ -605,6 +692,36 @@ export default {
         await loadUsers(usersPagination.value.page)
       } catch (error) {
         const message = error.response?.data?.message || 'Błąd odblokowywania użytkownika'
+        toast.error(message)
+      } finally {
+        isProcessing.value = false
+      }
+    }
+
+    // Usuwanie kolekcji
+    const openDeleteCollectionModal = (collection) => {
+      collectionToDelete.value = collection
+      isDeleteCollectionModalOpen.value = true
+    }
+
+    const closeDeleteCollectionModal = () => {
+      isDeleteCollectionModalOpen.value = false
+      collectionToDelete.value = null
+    }
+
+    const confirmDeleteCollection = async () => {
+      if (!collectionToDelete.value) return
+
+      try {
+        isProcessing.value = true
+        await CollectionService.deleteCollection(collectionToDelete.value._id)
+        
+        toast.success(`Kolekcja "${collectionToDelete.value.name}" została usunięta.`)
+        
+        closeDeleteCollectionModal()
+        await loadCollections(collectionsPagination.value.page)
+      } catch (error) {
+        const message = error.response?.data?.message || 'Błąd usuwania kolekcji'
         toast.error(message)
       } finally {
         isProcessing.value = false
@@ -823,6 +940,11 @@ export default {
       closeBlockConfirmModal,
       confirmBlockUser,
       unblockUser,
+      isDeleteCollectionModalOpen,
+      collectionToDelete,
+      openDeleteCollectionModal,
+      closeDeleteCollectionModal,
+      confirmDeleteCollection,
       openAddModal,
       closeAddModal,
       addNewAttribute,

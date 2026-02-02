@@ -211,7 +211,7 @@
                       <button
                         v-if="canDeleteComment(comment)"
                         @click="deleteComment(comment._id)"
-                        class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-50 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        class="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-50 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
                         title="Usuń komentarz"
                       >
                          <TrashIcon class="w-4 h-4" />
@@ -329,8 +329,16 @@ export default {
       return getImageUrl(img);
     });
 
-    // Formatowanie dat
+    // Formatowanie atrybutów (daty i boolean)
     const formatAttribute = (value) => {
+      // Boolean -> tak/nie
+      if (typeof value === 'boolean') {
+        return value ? 'tak' : 'nie';
+      }
+      if (value === 'true') return 'tak';
+      if (value === 'false') return 'nie';
+      
+      // Daty -> format polski
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (typeof value === 'string' && dateRegex.test(value)) {
         return formatDate(value);

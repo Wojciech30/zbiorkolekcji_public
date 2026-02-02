@@ -39,39 +39,41 @@
     <template v-else-if="user">
       <!-- Nagłówek -->
       <header class="mb-8">
-        <div class="flex items-center gap-6">
-          <!-- Awatar -->
-          <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-            <img 
-              v-if="user.avatar" 
-              :src="getImageUrl(user.avatar)" 
-              :alt="user.username"
-              class="w-full h-full object-cover"
-              @error="$event.target.style.display='none'"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center bg-blue-500 text-white text-3xl font-bold">
-              {{ user.username?.charAt(0).toUpperCase() }}
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <!-- Awatar -->
+            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 mx-auto sm:mx-0">
+              <img 
+                v-if="user.avatar" 
+                :src="getImageUrl(user.avatar)" 
+                :alt="user.username"
+                class="w-full h-full object-cover"
+                @error="$event.target.style.display='none'"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center bg-blue-500 text-white text-2xl sm:text-3xl font-bold">
+                {{ user.username?.charAt(0).toUpperCase() }}
+              </div>
             </div>
-          </div>
 
-          <!-- Informacje -->
-          <div>
-            <h1 class="text-3xl font-bold text-gray-800">{{ user.username }}</h1>
-            <p class="text-gray-500 mt-1">
-              Na platformie od {{ formatRelativeTime(user.createdAt) }}
-            </p>
-          </div>
+            <!-- Informacje -->
+            <div class="text-center sm:text-left flex-grow">
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">{{ user.username }}</h1>
+              <p class="text-gray-500 mt-1 text-sm sm:text-base">
+                Na platformie od {{ formatRelativeTime(user.createdAt) }}
+              </p>
+            </div>
 
-          <!-- Przycisk udostępnienia -->
-          <div class="ml-auto">
-            <button
-              @click="shareProfile"
-              class="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
-              title="Udostępnij profil"
-            >
-              <ShareIcon class="w-4 h-4" />
-              <span>Udostępnij</span>
-            </button>
+            <!-- Przycisk udostępnienia -->
+            <div class="flex justify-center sm:justify-end">
+              <button
+                @click="shareProfile"
+                class="flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                title="Udostępnij profil"
+              >
+                <ShareIcon class="w-4 h-4" />
+                <span>Udostępnij</span>
+              </button>
+            </div>
           </div>
         </div>
 
