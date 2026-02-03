@@ -185,7 +185,6 @@ export default {
         );
 
         serverError.value = message;
-        toast.error(message);
 
         canResendVerification.value = normalized.code === "EMAIL_NOT_VERIFIED";
       } finally {

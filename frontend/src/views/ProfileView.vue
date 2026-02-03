@@ -25,16 +25,7 @@
               {{ userInitials }}
             </div>
             
-            <!-- Przycisk zmiany awatara -->
-            <button
-              @click="showAvatarModal = true"
-              class="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
+
           </div>
           
           <div class="flex-grow text-center sm:text-left">
@@ -133,6 +124,35 @@
       @close="showSettingsModal = false"
     >
       <div class="space-y-6">
+        <!-- Zmiana Awatara -->
+        <div>
+          <h4 class="font-medium text-gray-800 mb-4">Zdjęcie profilowe</h4>
+          
+          <div class="flex flex-col gap-4">
+            <ImageUploader v-model="newAvatarUrl" :max-width="300" :max-height="300" />
+            
+            <div class="flex gap-3 justify-end">
+              <button
+                v-if="user?.avatar"
+                @click="removeAvatar"
+                class="px-4 py-2 border border-red-500 text-red-600 rounded hover:bg-red-50 transition-colors text-sm font-medium"
+                :disabled="isSavingAvatar"
+              >
+                Usuń zdjęcie
+              </button>
+              
+              <button
+                @click="saveAvatar"
+                :disabled="!newAvatarUrl || isSavingAvatar"
+                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ isSavingAvatar ? 'Zapisywanie...' : 'Zapisz nowe zdjęcie' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <hr class="border-gray-200" />
         <!-- Widoczność profilu -->
         <div class="flex items-center justify-between">
           <div>
@@ -208,34 +228,7 @@
       </div>
     </BaseModal>
 
-    <!-- Modal zmiany awatara -->
-    <BaseModal
-      :show="showAvatarModal"
-      title="Zmień awatar"
-      @close="showAvatarModal = false; newAvatarUrl = ''"
-    >
-      <ImageUploader v-model="newAvatarUrl" />
-      
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <button
-            @click="showAvatarModal = false; newAvatarUrl = ''"
-            class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            Anuluj
-          </button>
-          <button
-            @click="saveAvatar"
-            :disabled="isSavingAvatar"
-            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            :class="{ 'opacity-60 cursor-not-allowed': isSavingAvatar }"
-          >
-            <span v-if="!isSavingAvatar">Zapisz</span>
-            <span v-else>Zapisywanie...</span>
-          </button>
-        </div>
-      </template>
-    </BaseModal>
+
 
     <!-- Modal zmiany hasła -->
     <BaseModal
@@ -326,6 +319,7 @@
 
 <script>
 import AuthService from "@/services/AuthService";
+import apiClient from "@/services/apiClient";
 import CollectionService from "@/services/CollectionService";
 import ImageUploader from "@/components/ImageUploader.vue";
 import CollectionCard from "@/components/CollectionCard.vue";
@@ -336,7 +330,7 @@ import { useToast } from "vue-toastification";
 import { getUserFriendlyErrorMessage } from "@/utils/errorHandler";
 import { getImageUrl } from "@/utils/imageUrl";
 import { formatRelativeTime } from "@/utils/dateUtils";
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
 
@@ -372,7 +366,7 @@ export default {
     const isSavingVisibility = ref(false);
     
     // Awatar
-    const showAvatarModal = ref(false);
+
     const newAvatarUrl = ref("");
     const isSavingAvatar = ref(false);
 
@@ -472,21 +466,35 @@ export default {
     
     // Zapisz nowy avatar
     const saveAvatar = async () => {
-      if (!newAvatarUrl.value) {
-        toast.warning("Wybierz zdjęcie");
-        return;
-      }
+      if (!newAvatarUrl.value) return;
       
       isSavingAvatar.value = true;
       try {
         await AuthService.updateAvatar({ avatar: newAvatarUrl.value });
         store.commit('auth/UPDATE_USER', { avatar: newAvatarUrl.value });
         toast.success("Avatar został zmieniony!");
-        showAvatarModal.value = false;
         newAvatarUrl.value = "";
       } catch (error) {
         console.error("Błąd zmiany avatara:", error);
         toast.error("Nie udało się zmienić avatara");
+      } finally {
+        isSavingAvatar.value = false;
+      }
+    };
+
+    // Usuń avatar
+    const removeAvatar = async () => {
+      if (!confirm("Czy na pewno chcesz usunąć zdjęcie profilowe?")) return;
+
+      isSavingAvatar.value = true;
+      try {
+        // Pusty string oznacza usunięcie
+        await AuthService.updateAvatar({ avatar: "" });
+        store.commit('auth/UPDATE_USER', { avatar: "" });
+        toast.success("Zdjęcie profilowe zostało usunięte");
+      } catch (error) {
+        console.error("Błąd usuwania avatara:", error);
+        toast.error("Nie udało się usunąć zdjęcia");
       } finally {
         isSavingAvatar.value = false;
       }
@@ -582,6 +590,41 @@ export default {
       passwordErrors.confirmPassword = "";
     };
 
+    // Funkcja pomocnicza do usuwania pliku z serwera (jeśli nie jest avatarem użytkownika)
+    const cleanupUnsavedAvatar = async (url) => {
+      // Sprawdź czy url wygląda na plik lokalny z uploads i czy nie jest obecnym avatarem
+      if (!url || typeof url !== 'string' || !url.startsWith('/uploads/')) return;
+      if (user.value?.avatar === url) return;
+
+      const filename = url.split('/').pop();
+      if (!filename) return;
+
+      try {
+        await apiClient.delete(`/uploads/${filename}`);
+        console.log(`Usunięto niezatwierdzony plik: ${filename}`);
+      } catch (error) {
+        // Ignorujemy błędy usuwania plików tymczasowych (mogą już nie istnieć)
+        console.warn('Nie udało się usunąć pliku tymczasowego:', filename);
+      }
+    };
+
+    // Obserwuj zamykanie modala ustawień
+    watch(showSettingsModal, async (isOpen) => {
+      if (!isOpen && newAvatarUrl.value) {
+        // Jeśli zamykamy modal i mamy niezapisany, nowy avatar -> usuń go
+        await cleanupUnsavedAvatar(newAvatarUrl.value);
+        newAvatarUrl.value = "";
+      }
+    });
+
+    // Obserwuj zmianę nowego avatara (np. nadpisanie nowym uploadem)
+    watch(newAvatarUrl, async (newVal, oldVal) => {
+      if (oldVal && oldVal !== newVal) {
+        // Jeśli była poprzednia niezapisana wartość -> usuń ją
+        await cleanupUnsavedAvatar(oldVal);
+      }
+    });
+
     onMounted(() => {
       loadUserData();
     });
@@ -600,10 +643,10 @@ export default {
       submitChangePassword,
       isChangingPassword,
       passwordServerError,
-      showAvatarModal,
       newAvatarUrl,
       isSavingAvatar,
       saveAvatar,
+      removeAvatar,
       showPasswordModal,
       closePasswordModal,
       isProfilePublic,

@@ -72,7 +72,6 @@ export default {
         title.value = "E-mail został potwierdzony!";
         message.value = response.message || "Możesz się teraz zalogować.";
 
-        toast.success("Adres e-mail został potwierdzony 🎉");
         setTimeout(() => {
           router.push({ name: "Login" });
         }, 3000);

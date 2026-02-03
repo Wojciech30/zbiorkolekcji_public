@@ -521,7 +521,7 @@ export default {
           hideDescription: editingCollection.value.hideDescription
         }
 
-        if (editingCollection.value.coverImage) {
+        if (editingCollection.value.coverImage !== undefined) {
           updates.coverImage = editingCollection.value.coverImage
         }
 

@@ -12,6 +12,7 @@ import crypto from "crypto";
 import User from "../models/User.js";
 import authenticateToken from "../middleware/authenticateToken.js";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../config/mailer.js";
+import { deleteFile, deleteFiles } from "../utils/fileCleaner.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -628,6 +629,10 @@ router.put("/update-avatar", authenticateToken, async (req, res) => {
             });
         }
 
+        if (user.avatar && user.avatar !== avatar) {
+            deleteFile(user.avatar);
+        }
+
         user.avatar = avatar || "";
         await user.save();
 
@@ -820,8 +825,33 @@ router.delete("/delete-account", authenticateToken, async (req, res) => {
         const Item = (await import("../models/Item.js")).default;
 
         // Usuń wszystkie przedmioty użytkownika
-        const userCollections = await Collection.find({ owner: user._id }).select("_id");
+        const userCollections = await Collection.find({ owner: user._id });
         const collectionIds = userCollections.map(c => c._id);
+        
+        // Pobierz przedmioty, aby usunąć ich zdjęcia
+        const items = await Item.find({ parentCollection: { $in: collectionIds } });
+        
+        // Zbierz wszystkie pliki do usunięcia
+        const filesToDelete = [];
+        
+        // 1. Avatar
+        if (user.avatar) filesToDelete.push(user.avatar);
+        
+        // 2. Okładki kolekcji
+        userCollections.forEach(c => {
+            if (c.coverImage) filesToDelete.push(c.coverImage);
+        });
+        
+        // 3. Zdjęcia przedmiotów
+        items.forEach(item => {
+            if (item.images && item.images.length > 0) {
+                filesToDelete.push(...item.images);
+            }
+        });
+        
+        // Usuń pliki z dysku
+        deleteFiles(filesToDelete);
+
         await Item.deleteMany({ parentCollection: { $in: collectionIds } });
 
         // Usuń wszystkie kolekcje użytkownika
