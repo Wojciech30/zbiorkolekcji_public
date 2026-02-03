@@ -293,7 +293,7 @@
                 for="itemName"
                 class="block text-sm font-medium text-gray-700 mb-1"
               >
-                Nazwa przedmiotu*
+                Nazwa przedmiotu
               </label>
               <input
                 v-model="newItem.name"
@@ -310,7 +310,7 @@
                 for="itemDescription"
                 class="block text-sm font-medium text-gray-700 mb-1"
               >
-                Opis przedmiotu
+                Opis przedmiotu <span class="text-gray-400 font-normal">(opcjonalne)</span>
               </label>
               <textarea
                 v-model="newItem.description"
@@ -324,7 +324,7 @@
               <label
                 class="block text-sm font-medium text-gray-700 mb-1"
               >
-                Zdjęcie przedmiotu
+                Zdjęcie przedmiotu <span class="text-gray-400 font-normal">(opcjonalne)</span>
               </label>
               <ImageUploader v-model="newItem.imageUrl" />
             </div>
@@ -345,7 +345,7 @@
                   :for="`attr-${attr.name}`"
                   class="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  {{ attr.name }}<span v-if="attr.required" class="text-gray-700">*</span>
+                  {{ attr.name }}<span v-if="!attr.required" class="text-gray-400 font-normal ml-1">(opcjonalne)</span>
                 </label>
 
                 <template v-if="attr.type === 'string' || attr.type === 'text'">

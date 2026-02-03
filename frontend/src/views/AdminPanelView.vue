@@ -314,7 +314,7 @@
             <div class="space-y-4">
               <!-- Nazwa i opis -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii</label>
                 <input
                     v-model="newCategoryData.name"
                     type="text"
@@ -324,7 +324,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Opis <span class="text-gray-400 font-normal">(opcjonalne)</span></label>
                 <textarea
                     v-model="newCategoryData.description"
                     class="input-field h-24"
@@ -341,7 +341,7 @@
                 >
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
+                      <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu</label>
                       <input
                           v-model="attr.name"
                           type="text"
@@ -350,7 +350,7 @@
                       />
                     </div>
                     <div>
-                      <label class="block text-sm text-gray-600 mb-1">Typ *</label>
+                      <label class="block text-sm text-gray-600 mb-1">Typ</label>
                       <select v-model="attr.type" class="input-field" required>
                         <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
                           {{ type.label }}
@@ -372,7 +372,7 @@
                   <!-- Dla typu select -->
                   <div v-if="attr.type === 'select'" class="space-y-2">
                     <label class="block text-sm text-gray-600">
-                      Opcje (oddziel przecinkami) *
+                      Opcje (oddziel przecinkami)
                     </label>
                     <input
                         v-model="attr.optionsInput"
@@ -432,7 +432,7 @@
             <div class="space-y-4">
               <!-- Nazwa i opis -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa kategorii</label>
                 <input
                     v-model="editedCategory.name"
                     type="text"
@@ -442,7 +442,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Opis <span class="text-gray-400 font-normal">(opcjonalne)</span></label>
                 <textarea
                     v-model="editedCategory.description"
                     class="input-field h-24"
@@ -459,11 +459,11 @@
                 >
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu *</label>
+                      <label class="block text-sm text-gray-600 mb-1">Nazwa atrybutu</label>
                       <input v-model="attr.name" type="text" required class="input-field" />
                     </div>
                     <div>
-                      <label class="block text-sm text-gray-600 mb-1">Typ *</label>
+                      <label class="block text-sm text-gray-600 mb-1">Typ</label>
                       <select v-model="attr.type" class="input-field" required>
                         <option v-for="type in attributeTypes" :value="type.value" :key="type.value">
                           {{ type.label }}
@@ -483,7 +483,7 @@
                     </label>
                   </div>
                   <div v-if="attr.type === 'select'" class="space-y-2">
-                    <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami) *</label>
+                    <label class="block text-sm text-gray-600">Opcje (oddziel przecinkami)</label>
                     <input
                         v-model="attr.optionsInput"
                         type="text"

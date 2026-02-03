@@ -20,7 +20,7 @@
   >
     <form @submit.prevent="submit" class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Temat *</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Temat</label>
         <input
           v-model="subject"
           type="text"
@@ -31,7 +31,7 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Opis problemu *</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Opis problemu</label>
         <textarea
           v-model="message"
           rows="4"

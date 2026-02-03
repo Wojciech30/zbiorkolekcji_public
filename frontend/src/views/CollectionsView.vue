@@ -104,7 +104,7 @@
         <div class="flex-1 min-h-0 overflow-y-auto p-1">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa</label>
               <input
                   v-model="newCollection.name"
                   type="text"
@@ -115,7 +115,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Opis <span class="text-gray-400 font-normal">(opcjonalne)</span></label>
               <textarea
                   v-model="newCollection.description"
                   class="input-field h-24"
@@ -124,7 +124,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Kategoria *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kategoria</label>
               <select
                   v-model="newCollection.category"
                   class="input-field"
@@ -138,7 +138,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Prywatność *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Prywatność</label>
               <div class="space-y-2">
                 <label class="flex items-center space-x-2">
                   <input
@@ -162,7 +162,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki <span class="text-gray-400 font-normal">(opcjonalne)</span></label>
               <ImageUploader v-model="newCollection.coverImage" />
             </div>
           </div>
@@ -201,7 +201,7 @@
         <div class="flex-1 min-h-0 overflow-y-auto p-1">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nazwa</label>
               <input
                   v-model="editingCollection.name"
                   type="text"
@@ -212,7 +212,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Opis</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Opis <span class="text-gray-400 font-normal">(opcjonalne)</span></label>
               <textarea
                   v-model="editingCollection.description"
                   class="input-field h-24"
@@ -235,7 +235,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Prywatność *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Prywatność</label>
               <div class="space-y-2">
                 <label class="flex items-center space-x-2">
                   <input
@@ -259,7 +259,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Zdjęcie okładki <span class="text-gray-400 font-normal">(opcjonalne)</span></label>
               <ImageUploader v-model="editingCollection.coverImage" />
             </div>
 
