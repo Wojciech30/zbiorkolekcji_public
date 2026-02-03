@@ -591,7 +591,7 @@ router.post("/:id/comments", validateObjectId, authenticateToken, async (req, re
       req.params.id,
       { $push: { comments: newComment } },
       { new: true }
-    ).populate("comments.user", "username");
+    ).populate("comments.user", "username avatar");
 
     const addedComment = updated.comments[updated.comments.length - 1];
 

@@ -553,7 +553,7 @@ router.post("/:id/comments", validateObjectId, authenticateToken, verifyCollecti
             req.collection._id,
             { $push: { comments: newComment } },
             { new: true }
-        ).populate("comments.user", "username");
+        ).populate("comments.user", "username avatar");
 
         if (!collection) {
             return res.status(404).json({
