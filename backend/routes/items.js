@@ -32,6 +32,7 @@ import Category from "../models/Category.js";
 import authenticateToken from "../middleware/authenticateToken.js";
 import optionalAuthenticate from "../middleware/optionalAuthenticate.js";
 import validateObjectId from "../middleware/validateObjectId.js";
+import { deleteFiles } from "../utils/fileCleaner.js";
 
 const router = express.Router();
 
@@ -394,6 +395,12 @@ router.patch("/:id", validateObjectId, authenticateToken, loadItem, async (req, 
 
     if (req.body.images !== undefined || req.body.imageUrl !== undefined) {
       updates.images = normalizeImagesInput(req.body);
+
+      // Usuń pliki, które zostały usunięte z listy
+      if (req.item.images && req.item.images.length > 0) {
+        const removedImages = req.item.images.filter(img => !updates.images.includes(img));
+        deleteFiles(removedImages);
+      }
     }
 
     updates.attributes = attributes;
@@ -429,6 +436,11 @@ router.delete("/:id", validateObjectId, authenticateToken, loadItem, async (req,
         code: "ITEM_DELETE_FORBIDDEN",
         message: "Nie masz uprawnień do usunięcia przedmiotu w tej kolekcji"
       });
+    }
+
+    // Usuń zdjęcia przedmiotu
+    if (req.item.images && req.item.images.length > 0) {
+      deleteFiles(req.item.images);
     }
 
     await req.item.deleteOne();
@@ -516,7 +528,7 @@ router.get("/:id/comments", validateObjectId, optionalAuthenticate, async (req, 
   try {
     const item = await Item.findById(req.params.id)
       .select("comments parentCollection")
-      .populate("comments.user", "username");
+      .populate("comments.user", "username avatar");
 
     if (!item) {
       return res.status(404).json({

@@ -40,6 +40,7 @@ import {
 } from "../middleware/collectionMiddleware.js";
 import User from "../models/User.js";
 import validateObjectId from "../middleware/validateObjectId.js";
+import { deleteFile, deleteFiles } from "../utils/fileCleaner.js";
 
 const router = express.Router();
 
@@ -64,6 +65,17 @@ const handleError = (res, error, defaultMessage) => {
     }
 
     return res.status(500).json(response);
+};
+
+// Helper do obliczania statystyk kolekcji
+const getCollectionStats = async (collectionId) => {
+    const itemsCount = await Item.countDocuments({ parentCollection: collectionId });
+    // Pobierz przedmioty żeby policzyć komentarze i lajki przedmiotów
+    const items = await Item.find({ parentCollection: collectionId }).select('comments likes');
+    const itemCommentsCount = items.reduce((sum, item) => sum + (item.comments?.length || 0), 0);
+    const itemLikesCount = items.reduce((sum, item) => sum + (item.likes?.length || 0), 0);
+    
+    return { itemsCount, itemCommentsCount, itemLikesCount };
 };
 
 router.get("/", async (req, res) => {
@@ -254,6 +266,11 @@ router.patch(
                     return obj;
                 }, {});
 
+            // Jeśli zmieniono zdjęcie w tle (lub usunięto - pusty string), usuń stare
+            if (updates.coverImage !== undefined && req.collection.coverImage && req.collection.coverImage !== updates.coverImage) {
+                deleteFile(req.collection.coverImage);
+            }
+
             const updatedCollection = await Collection.findByIdAndUpdate(
                 req.params.id,
                 updates,
@@ -263,9 +280,19 @@ router.patch(
                 .populate("category", "name attributes")
                 .populate("allowedUsers", "username email");
 
+            // Oblicz statystyki
+            const stats = await getCollectionStats(updatedCollection._id);
+            
+            const collectionWithStats = {
+                ...updatedCollection.toObject(),
+                itemsCount: stats.itemsCount,
+                likesCount: (updatedCollection.likes?.length || 0) + stats.itemLikesCount,
+                commentsCount: (updatedCollection.comments?.length || 0) + stats.itemCommentsCount
+            };
+
             res.json({
                 code: "COLLECTION_UPDATED",
-                collection: updatedCollection
+                collection: collectionWithStats
             });
         } catch (error) {
             handleError(res, error, "Błąd aktualizacji kolekcji");
@@ -281,6 +308,21 @@ router.delete(
     verifyCollectionOwnership,
     async (req, res) => {
         try {
+            // 1. Usuń zdjęcie w tle kolekcji
+            if (req.collection.coverImage) {
+                deleteFile(req.collection.coverImage);
+            }
+
+            // 2. Usuń zdjęcia wszystkich przedmiotów w tej kolekcji
+            const items = await Item.find({ parentCollection: req.collection._id });
+            const itemImages = [];
+            items.forEach(item => {
+                if (item.images && item.images.length > 0) {
+                    itemImages.push(...item.images);
+                }
+            });
+            deleteFiles(itemImages);
+
             await req.collection.deleteOne();
             res.status(204).end();
         } catch (error) {
@@ -472,7 +514,7 @@ router.get("/:id/comments", validateObjectId, optionalAuthenticate, verifyCollec
     try {
         const collection = await Collection.findById(req.collection._id)
             .select("comments")
-            .populate("comments.user", "username");
+            .populate("comments.user", "username avatar");
 
         if (!collection) {
             return res.status(404).json({

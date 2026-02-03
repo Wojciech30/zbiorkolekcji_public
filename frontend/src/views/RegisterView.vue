@@ -1,13 +1,27 @@
-<!--
-  @view RegisterView
-  @description Formularz rejestracji nowego użytkownika.
-  Walidacja pól, wysyłka emaila weryfikacyjnego.
--->
 <template>
   <div>
     <h1 class="text-3xl font-bold text-center mb-6">Rejestracja</h1>
 
+    <!-- Success Message -->
+    <div v-if="isSuccess" class="max-w-lg mx-auto bg-green-50 p-8 rounded-lg shadow-sm border border-green-200 text-center">
+      <div class="mb-4 text-green-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">Konto zostało utworzone!</h2>
+      <p class="text-gray-600 mb-6">
+        Wysłaliśmy link aktywacyjny na Twój adres email: <strong>{{ email }}</strong>.<br>
+        Sprawdź skrzynkę odbiorczą (i folder spam), aby aktywować konto.
+      </p>
+      <router-link to="/login" class="btn-primary inline-block">
+        Przejdź do logowania
+      </router-link>
+    </div>
+
+    <!-- Registration Form -->
     <form
+        v-else
         @submit.prevent="registerUser"
         class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md space-y-4"
     >
@@ -20,6 +34,7 @@
         <label for="username" class="block font-bold">Nazwa użytkownika</label>
         <input
             v-model="username"
+            @blur="usernameBlur"
             id="username"
             type="text"
             class="input-field"
@@ -34,6 +49,7 @@
         <label for="email" class="block font-bold">Email</label>
         <input
             v-model="email"
+            @blur="emailBlur"
             id="email"
             type="email"
             class="input-field"
@@ -48,6 +64,7 @@
         <label for="password" class="block font-bold">Hasło</label>
         <input
             v-model="password"
+            @blur="passwordBlur"
             id="password"
             type="password"
             class="input-field"
@@ -75,18 +92,15 @@
 import AuthService from "../services/AuthService";
 import { useForm, useField } from "vee-validate";
 import * as yup from "yup";
-import { useToast } from "vue-toastification";
-import { useRouter } from "vue-router";
 import { ref } from "vue";
 import { getUserFriendlyErrorMessage } from "@/utils/errorHandler";
 
 export default {
   name: "RegisterView",
   setup() {
-    const toast = useToast();
-    const router = useRouter();
     const isSubmitting = ref(false);
     const serverError = ref("");
+    const isSuccess = ref(false);
 
     // Schema walidacji formularza
     const schema = yup.object({
@@ -102,10 +116,12 @@ export default {
     });
 
     // Pola formularza z vee-validate
+    // Konfiguracja validateOnValueUpdate: false opóźnia walidację do momentu called handleBlur (lub submit)
     const { handleSubmit, errors } = useForm({ validationSchema: schema });
-    const { value: username } = useField("username");
-    const { value: email } = useField("email");
-    const { value: password } = useField("password");
+    
+    const { value: username, handleBlur: usernameBlur } = useField("username", undefined, { validateOnValueUpdate: false });
+    const { value: email, handleBlur: emailBlur } = useField("email", undefined, { validateOnValueUpdate: false });
+    const { value: password, handleBlur: passwordBlur } = useField("password", undefined, { validateOnValueUpdate: false });
 
     // Obsługa rejestracji
     const registerUser = handleSubmit(async (values) => {
@@ -119,18 +135,20 @@ export default {
           password: values.password
         });
 
-        toast.success("Rejestracja zakończona sukcesem!");
-        await router.push("/login");
+        isSuccess.value = true;
       } catch (error) {
         console.error("Błąd rejestracji:", error.response?.data || error.message);
 
-        const message = getUserFriendlyErrorMessage(
-            error,
-            "Rejestracja nie powiodła się."
-        );
+        // Próba pobrania konkretnego komunikatu błędu z backendu
+        let message = "Rejestracja nie powiodła się.";
+        
+        if (error.response?.data?.message) {
+             message = error.response.data.message;
+        } else {
+             message = getUserFriendlyErrorMessage(error, message);
+        }
 
         serverError.value = message;
-        toast.error(message);
       } finally {
         isSubmitting.value = false;
       }
@@ -140,10 +158,14 @@ export default {
       username,
       email,
       password,
+      usernameBlur,
+      emailBlur,
+      passwordBlur,
       errors,
       registerUser,
       isSubmitting,
-      serverError
+      serverError,
+      isSuccess
     };
   }
 };
