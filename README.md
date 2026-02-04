@@ -48,11 +48,11 @@ VUE_APP_BASE_URL=http://localhost:3000
 ## Uruchomienie
 
 ```bash
-# Development (frontend + backend)
-npm run start:dev
-
 # Pierwsze uruchomienie z tworzeniem admina
 npm run setup
+
+# Development (frontend + backend)
+npm run start:dev
 ```
 
 ## Struktura projektu
