@@ -12,8 +12,8 @@ Aplikacja do tworzenia, zarządzania i udostępniania kolekcji przedmiotów.
 
 ```bash
 # Klonowanie repozytorium
-git clone https://github.com/Wojciech30/zbiorkoleckcji_public.git
-cd zbiorkolekcji
+git clone https://github.com/Wojciech30/zbiorkolekcji_public.git
+cd zbiorkolekcji_public
 
 # Instalacja zależności
 npm install
@@ -36,7 +36,7 @@ MAILDEV_HOST=localhost
 MAILDEV_PORT=1025
 ADMIN_EMAIL=*dowolny adres email*
 FRONTEND_BASE_URL=http://localhost:8080
-
+CORS_ ORIGIN= 127.0.0.1:8080
 ```
 
 ## Uruchomienie
