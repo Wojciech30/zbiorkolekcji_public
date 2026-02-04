@@ -1,0 +1,78 @@
+# --- NODE & BUILD ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+package-lock.json
+*.tsbuildinfo
+
+# --- FRONTEND ---
+frontend/dist/
+frontend/.env
+frontend/.env.*
+frontend/node_modules/
+
+# --- BACKEND ---
+backend/node_modules/
+backend/.env
+backend/.env.*
+backend/logs/
+backend/tmp/
+backend/uploads/
+backend/storage/
+backend/.cache/
+backend/.pm2/
+backend/*.pem
+backend/*.key
+
+# --- SYSTEM / IDE ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# --- OS / TEMP FILES ---
+*.log
+*.pid
+*.seed
+*.bak
+*.tmp
+*.old
+*.orig
+
+# --- PM2 / PROCESS ---
+.pm2/
+*.pid.lock
+
+# --- DEPLOY / RUNTIME ---
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.csr
+*.zip
+*.tar.gz
+*.tgz
+
+# --- BACKUPS & DATABASE DUMPS ---
+dump.rdb
+*.sql
+*.sqlite
+*.sqlite3
+*.bak
+
+# --- IMAGES / UPLOADS ---
+uploads/
+public/uploads/
+storage/
+media/
+TODO
+
+# --- TESTS ---
+*.spec.js
+*.test.js
+vitest.config.js
