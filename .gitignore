@@ -71,3 +71,8 @@ public/uploads/
 storage/
 media/
 TODO
+
+# --- TESTS ---
+*.spec.js
+*.test.js
+vitest.config.js
