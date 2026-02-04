@@ -28,7 +28,7 @@ Utwórz pliki `.env` w katalogu projektu:
 ```env
 MONGODB_URI=mongodb://localhost:27017/zbiorkolekcji
 JWT_SECRET=*losowy ciąg znaków*
-SALT_ROUNDS=*losowa liczba*
+SALT_ROUNDS=10
 PORT=3000
 NODE_ENV=development
 VUE_APP_BASE_URL=http://localhost:3000
@@ -36,7 +36,7 @@ MAILDEV_HOST=localhost
 MAILDEV_PORT=1025
 ADMIN_EMAIL=*dowolny adres email*
 FRONTEND_BASE_URL=http://localhost:8080
-CORS_ORIGIN=127.0.0.1:8080
+CORS_ORIGIN=localhost:8080
 ```
 
 ## Uruchomienie
