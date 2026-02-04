@@ -119,15 +119,15 @@
               <p class="text-gray-600 text-lg leading-relaxed">{{ item.description || "Brak opisu przedmiotu." }}</p>
             </div>
 
-            <!-- Atrybuty -->
-            <div v-if="item.attributes && Object.keys(item.attributes).length > 0">
+            <!-- Atrybuty (tylko wypełnione) -->
+            <div v-if="filledAttributes && Object.keys(filledAttributes).length > 0">
               <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <TagIcon class="w-5 h-5 text-blue-500" />
                 Cechy przedmiotu
               </h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div 
-                  v-for="(attr, key) in item.attributes" 
+                  v-for="(attr, key) in filledAttributes" 
                   :key="key" 
                   class="bg-gray-50 rounded-lg p-3 flex flex-col hover:bg-gray-100 transition-colors"
                 >
@@ -135,9 +135,6 @@
                   <span class="text-gray-800 font-medium">{{ formatAttribute(attr?.value ?? attr) }}</span>
                 </div>
               </div>
-            </div>
-            <div v-else class="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-              <p class="text-gray-500 text-sm">Ten przedmiot nie posiada dodatkowych atrybutów.</p>
             </div>
           </div>
 
@@ -329,6 +326,23 @@ export default {
       return getImageUrl(img);
     });
 
+    // Filtruj tylko wypełnione atrybuty (pomijaj null, undefined, puste stringi)
+    const filledAttributes = computed(() => {
+      const attrs = item.value?.attributes;
+      if (!attrs || typeof attrs !== 'object') return {};
+      
+      const filled = {};
+      for (const [key, attr] of Object.entries(attrs)) {
+        const value = attr?.value ?? attr;
+        // Pomijaj puste wartości
+        if (value === null || value === undefined || value === '') continue;
+        // Pomijaj puste tablice
+        if (Array.isArray(value) && value.length === 0) continue;
+        filled[key] = attr;
+      }
+      return filled;
+    });
+
     // Formatowanie atrybutów (daty i boolean)
     const formatAttribute = (value) => {
       // Boolean -> tak/nie
@@ -509,6 +523,7 @@ export default {
       item,
       isLoading,
       mainImageUrl,
+      filledAttributes,
       isAuthenticated,
       comments,
       newComment,
