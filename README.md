@@ -31,12 +31,18 @@ JWT_SECRET=*losowy ciąg znaków*
 SALT_ROUNDS=10
 PORT=3000
 NODE_ENV=development
-VUE_APP_BASE_URL=http://localhost:3000
 MAILDEV_HOST=localhost
 MAILDEV_PORT=1025
 ADMIN_EMAIL=*dowolny adres email*
 FRONTEND_BASE_URL=http://localhost:8080
 CORS_ORIGIN=localhost:8080
+```
+
+Utwórz pliki `.env` w katalogu frontendu:
+
+```env
+VUE_APP_API_BASE_URL=http://localhost:3000/api/v1
+VUE_APP_BASE_URL=http://localhost:3000
 ```
 
 ## Uruchomienie
