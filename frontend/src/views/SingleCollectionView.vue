@@ -363,7 +363,7 @@
                   <input
                     :id="`attr-${attr.name}`"
                     :value="getAttributeValue(attr)"
-                    @input="setAttributeValue(attr, $event.target.valueAsNumber)"
+                    @input="setAttributeValue(attr, $event.target.value === '' ? null : $event.target.valueAsNumber)"
                     type="number"
                     class="input-field"
                     :required="attr.required"
@@ -888,6 +888,11 @@ export default {
 
     // Ustawianie wartości atrybutu
     const setAttributeValue = (attr, value) => {
+      // Obsługa NaN (np. gdy użytkownik wyczyści pole liczbowe)
+      if (typeof value === 'number' && isNaN(value)) {
+        value = null;
+      }
+      
       if (!newItem.value.attributes[attr.name]) {
         newItem.value.attributes[attr.name] = {
           type: attr.type,

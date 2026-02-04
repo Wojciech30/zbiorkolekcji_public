@@ -114,8 +114,16 @@ const normalizeAttributesInput = (incomingAttributes) => {
 const isValidUrl = (v) => typeof v === "string" && /^(http|https):\/\/[^ "]+$/.test(v);
 const isValidDateString = (v) => typeof v === "string" && !Number.isNaN(Date.parse(v));
 
-const castAndValidateValue = (schema, raw) => {
+const castAndValidateValue = (schema, raw, isRequired = true) => {
   const type = schema.type;
+
+  // Obsługa null/undefined/pustych wartości dla opcjonalnych atrybutów
+  if (raw === null || raw === undefined || raw === '') {
+    if (!isRequired) {
+      return { ok: true, value: null, skip: true };
+    }
+    return { ok: false, value: null, error: `Wartość jest wymagana` };
+  }
 
   if (type === "number") {
     const num = Number(raw);
@@ -201,11 +209,14 @@ const validateAndBuildAttributes = (category, incomingAttributes, { mode, existi
     }
     // Konwertuj subdokument Mongoose na zwykły obiekt
     const defObj = def.toObject ? def.toObject() : def;
-    const { ok, value, error } = castAndValidateValue({ ...defObj, type: normalizedDefType }, incoming.value);
+    const { ok, value, error, skip } = castAndValidateValue({ ...defObj, type: normalizedDefType }, incoming.value, def.required);
     if (!ok) {
       errors.push(`Atrybut '${key}': ${error}`);
       continue;
     }
+
+    // Pomijaj puste opcjonalne atrybuty
+    if (skip) continue;
 
     result[key] = { type: normalizedDefType, value };
   }
