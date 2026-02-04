@@ -8,6 +8,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.13.0",
     "mongoose": "^8.9.5",
+    "tar": "^7.5.7",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {

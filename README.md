@@ -12,8 +12,8 @@ Aplikacja do tworzenia, zarządzania i udostępniania kolekcji przedmiotów.
 
 ```bash
 # Klonowanie repozytorium
-git clone https://github.com/your-repo/zbiorkolekcji.git
-cd zbiorkolekcji
+git clone https://github.com/Wojciech30/zbiorkolekcji_public.git
+cd zbiorkolekcji_public
 
 # Instalacja zależności
 npm install
@@ -23,41 +23,29 @@ cd frontend && npm install && cd ..
 
 ## Konfiguracja
 
-Utwórz pliki `.env` w katalogu `backend/`:
+Utwórz pliki `.env` w katalogu projektu:
 
 ```env
-PORT=3000
 MONGODB_URI=mongodb://localhost:27017/zbiorkolekcji
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_EXPIRES_IN=30d
-
-# Email (production)
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-email
-SMTP_PASS=your-password
-EMAIL_FROM=noreply@example.com
-
-# Development: użyj MailDev (localhost:1025)
+JWT_SECRET=*losowy ciąg znaków*
+SALT_ROUNDS=*losowa liczba*
+PORT=3000
 NODE_ENV=development
+VUE_APP_BASE_URL=http://localhost:3000
+MAILDEV_HOST=localhost
+MAILDEV_PORT=1025
+ADMIN_EMAIL=*dowolny adres email*
+FRONTEND_BASE_URL=http://localhost:8080
+CORS_ORIGIN=127.0.0.1:8080
 ```
 
 ## Uruchomienie
 
 ```bash
 # Development (frontend + backend)
-npm start
+npm run start:dev
 
 # Pierwsze uruchomienie z tworzeniem admina
-npm run setup
-```
-
-## Tworzenie konta admina
-
-Przy pierwszym uruchomieniu użyj skryptu setup:
-
-```bash
 npm run setup
 ```
 
@@ -65,25 +53,27 @@ npm run setup
 
 ```
 zbiorkolekcji/
-├── backend/          # Express.js API
-│   ├── models/       # Mongoose schemas
-│   ├── routes/       # API endpoints
-│   ├── middleware/   # Auth, validation
-│   └── server.js     # Entry point
-├── frontend/         # Vue.js 3 SPA
-│   ├── src/
-│   │   ├── views/    # Page components
-│   │   ├── services/ # API clients
-│   │   └── store/    # Vuex state
-└── scripts/          # Setup scripts
+├── backend
+│   ├── config
+│   ├── middleware
+│   ├── models
+│   ├── routes
+│   ├── uploads
+│   ├── utils
+│   └── server.js
+├── frontend
+│   ├── public
+│   └── src
+│       ├── assets
+│       ├── components
+│       ├── router
+│       ├── services
+│       ├── store
+│       ├── utils
+│       ├── views
+│       ├── App.vue
+│       └── main.js
+├── scripts
+├── .env
+└── README.md
 ```
-
-## API Endpoints
-
-| Endpoint                     | Opis             |
-| ---------------------------- | ---------------- |
-| `POST /api/v1/auth/login`    | Logowanie        |
-| `POST /api/v1/auth/register` | Rejestracja      |
-| `GET /api/v1/collections`    | Lista kolekcji   |
-| `GET /api/v1/categories`     | Lista kategorii  |
-| `GET /api/v1/admin/*`        | Endpointy admina |
