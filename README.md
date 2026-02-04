@@ -36,7 +36,7 @@ MAILDEV_HOST=localhost
 MAILDEV_PORT=1025
 ADMIN_EMAIL=*dowolny adres email*
 FRONTEND_BASE_URL=http://localhost:8080
-CORS_ ORIGIN= 127.0.0.1:8080
+CORS_ORIGIN=127.0.0.1:8080
 ```
 
 ## Uruchomienie
