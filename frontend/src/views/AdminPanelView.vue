@@ -18,9 +18,9 @@
     <div v-else>
       <!-- Zarządzanie kategoriami -->
       <section class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-2xl font-semibold text-gray-700">Zarządzanie kategoriami</h2>
-          <button @click="openAddModal" class="btn-primary flex items-center gap-2">
+        <div class="relative mb-4">
+          <h2 class="text-2xl font-semibold text-gray-700 text-center">Zarządzanie kategoriami</h2>
+          <button @click="openAddModal" class="btn-primary flex items-center gap-2 absolute right-0 top-1/2 -translate-y-1/2">
             <PlusIcon class="w-5 h-5" />
             Dodaj kategorię
           </button>
@@ -53,7 +53,7 @@
 
       <!-- Zarządzanie użytkownikami -->
       <section class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Zarządzanie użytkownikami</h2>
+        <h2 class="text-2xl font-semibold mb-4 text-gray-700 text-center">Zarządzanie użytkownikami</h2>
         
         <!-- Wyszukiwarka -->
         <div class="mb-4">
