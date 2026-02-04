@@ -782,7 +782,7 @@ export default {
           } else {
             newItem.value.attributes[attrName] = {
               type: attr.type,
-              value: attr.type === "number" ? 0 : ""
+              value: null
             };
           }
         });
@@ -880,7 +880,7 @@ export default {
       if (!newItem.value.attributes[attr.name]) {
         newItem.value.attributes[attr.name] = {
           type: attr.type,
-          value: attr.type === "number" ? 0 : ""
+          value: null
         };
       }
       return newItem.value.attributes[attr.name].value;
